@@ -1,10 +1,12 @@
 import React from "react";
 
 import { Outlet } from "react-router-dom";
+import { Header } from "../Header/index.tsx";
 
 function Layout() {
     return (
         <div>
+            <Header />
             <Outlet />
         </div>
     )
