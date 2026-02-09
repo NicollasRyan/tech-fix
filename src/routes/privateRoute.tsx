@@ -2,6 +2,7 @@ import React from "react";
 import { Navigate, Outlet } from "react-router-dom";
 import { Box, CircularProgress } from "@mui/material";
 import { useAuth } from "../contexts/AuthContext.tsx";
+import { Header } from "../components/Header/index.tsx";
 
 const PrivateRoute = () => {
   const { user, loading } = useAuth();
@@ -14,7 +15,13 @@ const PrivateRoute = () => {
     );
   }
 
-  return user ? <Outlet /> : <Navigate to="/login" />;
+  return user ? (
+    <>
+      <Header />
+      <Outlet />
+    </>
+
+  ) : <Navigate to="/login" />;
 };
 
 export default PrivateRoute;
