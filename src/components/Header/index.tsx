@@ -1,11 +1,18 @@
-import { Box, Typography } from "@mui/material";
-import React from "react";
+import { Person } from "@mui/icons-material";
+import { HeaderContainer, UserMenu } from "./styles.ts";
 
 export function Header() {
-    return (
-        <Box component="header" sx={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: 2 }}>
-            <Typography variant="h6">Tech Fix</Typography>
-            <Typography variant="h6">User</Typography>
-        </Box>
-    );
+  return (
+    <HeaderContainer>
+      <img
+        src="/logo.png"
+        alt="Logo Tech Fix"
+        width={110}
+        style={{ marginBottom: 16 }}
+      />
+      <UserMenu>
+        <Person />
+      </UserMenu>
+    </HeaderContainer>
+  );
 }

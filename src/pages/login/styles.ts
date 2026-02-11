@@ -59,6 +59,10 @@ export const ButoonForm = styled(Button)`
   color: #fff;
   border-radius: 8px;
   text-transform: capitalize;
+
+  &:hover {
+    background-color: #333;
+  }
 `;
 
 export const ButtonLogin = styled(Button)`

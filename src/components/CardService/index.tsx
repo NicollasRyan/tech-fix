@@ -1,48 +1,64 @@
-import React, { useState } from "react";
-import { Avatar, Card, CardActions, CardContent, CardHeader, CardMedia, Collapse, IconButton, Typography } from "@mui/material";
-import { red } from "@mui/material/colors";
-import MoreVertIcon from "@mui/icons-material/MoreVert";
-import FavoriteIcon from "@mui/icons-material/Favorite";
-import ShareIcon from "@mui/icons-material/Share";
-import ExpandMoreIcon from "@mui/icons-material/ExpandMore";
+import { CardContent, Typography } from "@mui/material";
+import { BoxTypeService, CardBox, TextClient } from "./styles.ts";
 
-export const CardService = ({ title, description }: { title: string, description: string }) => {
+export const CardService = ({
+  serviceType,
+  clientName,
+  createdAt,
+}: {
+  serviceType: string;
+  clientName: string;
+  createdAt: { toDate: () => Date };
+  notificationDate: { toDate: () => Date } | null;
+}) => {
+  const serviceStyles: Record<string, { base: string; bg: string }> = {
+    "Motor de Portão": {
+      base: "#6b6b6b",
+      bg: "rgba(107, 107, 107, 0.15)",
+    },
+    Câmera: {
+      base: "#1e7f3b",
+      bg: "rgba(91, 255, 106, 0.18)",
+    },
+    Arcondicionado: {
+      base: "#1c6f85",
+      bg: "rgba(91, 229, 255, 0.18)",
+    },
+    "Sistemas Solares": {
+      base: "#2a3db8",
+      bg: "rgba(71, 95, 255, 0.18)",
+    },
+  };
+
+  const style = serviceStyles[serviceType] ?? serviceStyles["Câmera"];
+
+  const serviceImage = (serviceType: string) => {
+    switch (serviceType) {
+      case "Motor de Portão":
+        return "portao.png";
+      case "Câmeras":
+        return "camera.png";
+      case "Arcondicionado":
+        return "arcondicionado.jpg";
+      case "Sistemas Solares":
+        return "sistema_solar.jpg";
+      default:
+        return "default.png";
+    }
+  };
+
   return (
-    <Card sx={{ maxWidth: 345 }}>
-      <CardHeader
-        avatar={
-          <Avatar sx={{ bgcolor: red[500] }} aria-label="recipe">
-            R
-          </Avatar>
-        }
-        action={
-          <IconButton aria-label="settings">
-            <MoreVertIcon />
-          </IconButton>
-        }
-        title={title}
-        subheader="September 14, 2016"
-      />
-      <CardMedia
-        component="img"
-        height="194"
-        image="/static/images/cards/paella.jpg"
-        alt="Paella dish"
-      />
-      <CardContent>
-        <Typography variant="body2" sx={{ color: 'text.secondary' }}>
-          {description}
+    <CardBox>
+      <img src={serviceImage(serviceType)} alt="Imagem do serviço" />
+      <CardContent sx={{ padding: "20px" }}>
+        <BoxTypeService bg={style.bg} border={style.base} color={style.base}>
+          <Typography>{serviceType}</Typography>
+        </BoxTypeService>
+        <TextClient>{clientName}</TextClient>
+        <Typography variant="body2" sx={{ color: "#666", fontSize: "13px" }}>
+          Foi feito em {createdAt.toDate().toLocaleDateString()}
         </Typography>
       </CardContent>
-      <CardActions disableSpacing>
-        <IconButton aria-label="add to favorites">
-          <FavoriteIcon />
-        </IconButton>
-        <IconButton aria-label="share">
-          <ShareIcon />
-        </IconButton>
-        
-      </CardActions>
-    </Card>
-  )
-}
+    </CardBox>
+  );
+};
