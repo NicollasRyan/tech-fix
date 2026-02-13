@@ -19,6 +19,7 @@ import { onAuthStateChanged } from "firebase/auth";
 import { auth, db } from "../../firebase.ts";
 
 export type ServiceDoc = {
+  manutencoes: any;
   id: string;
   clientName: string;
   serviceType: string;

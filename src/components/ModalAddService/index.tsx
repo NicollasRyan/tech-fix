@@ -12,9 +12,11 @@ import {
 import { DatePicker } from "@mui/x-date-pickers/DatePicker";
 import { LocalizationProvider } from "@mui/x-date-pickers/LocalizationProvider";
 import { AdapterDayjs } from "@mui/x-date-pickers/AdapterDayjs";
+import { ptBR } from "@mui/x-date-pickers/locales";
 import dayjs, { Dayjs } from "dayjs";
 import { useEffect } from "react";
 import { Controller, useForm } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
 import {
   Timestamp,
   addDoc,
@@ -23,6 +25,7 @@ import {
   updateDoc,
 } from "firebase/firestore";
 import { auth, db } from "../../firebase.ts";
+import { serviceSchema } from "./serviceSchema.ts";
 import {
   BoxButtons,
   ButtonCancel,
@@ -34,7 +37,7 @@ import {
 type FormValues = {
   clientName: string;
   serviceType: string;
-  description: string;
+  description?: string;
   valueService: string;
   notify: boolean;
   notificationDate: Dayjs | null;
@@ -43,7 +46,7 @@ type FormValues = {
 export type ModalAddServiceInitialData = {
   clientName: string;
   serviceType: string;
-  description: string;
+  description?: string;
   valueService: string;
   notificationDate: { toDate: () => Date } | null;
 };
@@ -82,6 +85,7 @@ export const ModalAddService = ({
     formState: { errors, isSubmitting },
   } = useForm<FormValues>({
     defaultValues,
+    resolver: zodResolver(serviceSchema),
   });
   const notify = watch("notify");
 
@@ -113,7 +117,7 @@ export const ModalAddService = ({
         await updateDoc(doc(db, "services", serviceId), {
           clientName: data.clientName,
           serviceType: data.serviceType,
-          description: data.description,
+          description: data?.description,
           valueService: data.valueService,
           notificationDate:
             data.notify && data.notificationDate
@@ -124,7 +128,7 @@ export const ModalAddService = ({
         await addDoc(servicesRef, {
           clientName: data.clientName,
           serviceType: data.serviceType,
-          description: data.description,
+          description: data?.description,
           valueService: data.valueService,
           notificationDate:
             data.notify && data.notificationDate
@@ -146,7 +150,11 @@ export const ModalAddService = ({
       open={showModal}
       onClose={() => setShowModal(false)}
       children={
-        <LocalizationProvider dateAdapter={AdapterDayjs}>
+        <LocalizationProvider 
+          dateAdapter={AdapterDayjs}
+          adapterLocale="pt-br"
+          localeText={ptBR.components.MuiLocalizationProvider.defaultProps.localeText}
+        >
           <Container>
             <TextModal>
               {isEdit ? "Editar Serviço" : "Adcionar Novo Serviço"}
@@ -156,9 +164,7 @@ export const ModalAddService = ({
                 <Grid size={6}>
                   <TextField
                     label="Nome do cliente"
-                    {...register("clientName", {
-                      required: "Nome do cliente é obrigatório",
-                    })}
+                    {...register("clientName")}
                     error={!!errors.clientName}
                     helperText={errors.clientName?.message}
                     fullWidth
@@ -168,7 +174,6 @@ export const ModalAddService = ({
                   <Controller
                     name="serviceType"
                     control={control}
-                    rules={{ required: "Tipo de serviço é obrigatório" }}
                     render={({ field }) => (
                       <>
                         <Select
@@ -201,11 +206,20 @@ export const ModalAddService = ({
                 <Grid size={12}>
                   <TextField
                     label="Descrição do Serviço"
-                    {...register("description", {
-                      required: "Descrição é obrigatória",
-                    })}
+                    {...register("description")}
                     error={!!errors.description}
                     helperText={errors.description?.message}
+                    fullWidth
+                  />
+                </Grid>
+                <Grid size={6}>
+                  <TextField
+                    label="Valor do Serviço"
+                    type="number"
+                    inputProps={{ step: "0.01", min: "0" }}
+                    {...register("valueService")}
+                    error={!!errors.valueService}
+                    helperText={errors.valueService?.message}
                     fullWidth
                   />
                 </Grid>
@@ -233,10 +247,16 @@ export const ModalAddService = ({
                         <>
                           <Typography>Data de Notificação:</Typography>
                           <DatePicker
-                            value={field.value ?? dayjs()}
-                            onChange={field.onChange}
+                            value={field.value || dayjs()}
+                            onChange={(date) => field.onChange(date)}
+                            minDate={dayjs()}
                             slotProps={{ textField: { fullWidth: true } }}
                           />
+                          {errors.notificationDate && (
+                            <FormHelperText error>
+                              {errors.notificationDate.message}
+                            </FormHelperText>
+                          )}
                         </>
                       )}
                     />
@@ -248,7 +268,7 @@ export const ModalAddService = ({
                 <ButtonCancel onClick={() => setShowModal(false)}>
                   Cancelar
                 </ButtonCancel>
-                <ButtonSubmit type="submit" disabled={isSubmitting}>
+                <ButtonSubmit type="submit">
                   {isSubmitting
                     ? "Salvando..."
                     : isEdit
