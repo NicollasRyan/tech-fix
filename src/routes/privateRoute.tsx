@@ -9,10 +9,19 @@ const PrivateRoute = () => {
 
   if (loading) {
     return (
-      <Box display="flex" justifyContent="center" alignItems="center" minHeight="50vh">
+      <Box
+        display="flex"
+        justifyContent="center"
+        alignItems="center"
+        minHeight="50vh"
+      >
         <CircularProgress />
       </Box>
     );
+  }
+
+  if (!user) {
+    return <Navigate to="/login" replace />;
   }
 
   return user ? (
@@ -20,8 +29,9 @@ const PrivateRoute = () => {
       <Header />
       <Outlet />
     </>
-
-  ) : <Navigate to="/login" />;
+  ) : (
+    <Navigate to="/login" />
+  );
 };
 
 export default PrivateRoute;

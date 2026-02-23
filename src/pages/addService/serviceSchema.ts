@@ -29,6 +29,45 @@ export const serviceSchema = z.object({
     ),
   notify: z.boolean(),
   notificationDate: z.any().nullable(),
+  phone: z
+    .string()
+    .regex(/^\(?\d{2}\)?\s?\d{4,5}-?\d{4}$/, "Telefone inválido")
+    .optional()
+    .or(z.literal("")),
+  email: z
+    .string()
+    .email("Email inválido")
+    .optional()
+    .or(z.literal("")),
+  cpf: z
+    .string()
+    .regex(/^\d{3}\.\d{3}\.\d{3}-\d{2}$/, "CPF deve estar no formato XXX.XXX.XXX-XX")
+    .optional()
+    .or(z.literal("")),
+  address: z
+    .string()
+    .max(200, "Endereço não pode exceder 200 caracteres")
+    .trim()
+    .optional()
+    .or(z.literal("")),
+  equipmentModel: z
+    .string()
+    .max(100, "Modelo do equipamento não pode exceder 100 caracteres")
+    .trim()
+    .optional()
+    .or(z.literal("")),
+  equipmentBrand: z
+    .string()
+    .max(100, "Marca não pode exceder 100 caracteres")
+    .trim()
+    .optional()
+    .or(z.literal("")),
+  usedParts: z
+    .string()
+    .max(500, "Peças utilizadas não pode exceder 500 caracteres")
+    .trim()
+    .optional()
+    .or(z.literal("")),
 }).refine(
   (data) => !data.notify || (data.notify && data.notificationDate),
   {

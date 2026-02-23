@@ -1,8 +1,6 @@
 import styled from "@emotion/styled";
 import { Box, Button, TableCell, TableRow, Typography } from "@mui/material";
 
-export const Title = styled(Typography)``;
-
 export const BoxButtons = styled(Box)`
   display: flex;
   justify-content: space-between;
@@ -41,7 +39,7 @@ export const BoxInfo = styled(Box)`
   background-color: #f5f5f5;
   border-radius: 8px;
   /* border: 1px solid #ddd; */
-  /* padding: 16px; */
+  padding-bottom: 32px;
 `;
 
 export const InfoItem = styled(TableRow)`

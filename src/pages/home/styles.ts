@@ -19,14 +19,6 @@ export const Label = styled(Typography)`
   margin-right: 8px;
 `;
 
-export const ButtonService = styled(Button)<{ active?: boolean }>`
-  border-radius: 18px;
-  padding: 2px 14px;
-  background-color: ${(props) => (props.active ? "#0161FE" : "#fff")};
-  color: ${(props) => (props.active ? "white" : "#444141")};
-  border: 1px solid ${(props) => (props.active ? "none" : "#444141")};
-`;
-
 export const SelectTypeService = styled(Select)`
   border-radius: 18px;
   padding: 2px 14px;

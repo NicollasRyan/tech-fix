@@ -5,7 +5,6 @@ import { db } from "../../firebase.ts";
 import { LocalizationProvider } from "@mui/x-date-pickers/LocalizationProvider";
 import { AdapterDayjs } from "@mui/x-date-pickers/AdapterDayjs";
 import { ptBR } from "@mui/x-date-pickers/locales";
-import dayjs from "dayjs";
 import { zodResolver } from "@hookform/resolvers/zod";
 import {
   BoxButtons,
@@ -65,6 +64,7 @@ export const ModalAddMaintenance = ({
               ? { ...m, description: data.description }
               : m
           ),
+          updatedAt: Timestamp.now(),
         });
       } else {
         await updateDoc(doc(db, "services", serviceId), {
@@ -73,6 +73,7 @@ export const ModalAddMaintenance = ({
             description: data.description,
             createdAt: Timestamp.now(),
           }),
+          updatedAt: Timestamp.now(),
         });
       }
 

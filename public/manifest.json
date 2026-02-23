@@ -1,0 +1,16 @@
+{
+  "short_name": "Tech Fix",
+  "name": "Tech Fix - Gerenciador de Serviços",
+  "description": "Sistema completo para gerenciamento de serviços técnicos, clientes e equipamentos. Acompanhe manutenções, notificações e histórico de serviços.",
+  "icons": [
+    {
+      "src": "favicon.ico",
+      "sizes": "64x64 32x32 24x24 16x16",
+      "type": "image/x-icon"
+    }
+  ],
+  "start_url": "/",
+  "display": "standalone",
+  "theme_color": "#000000",
+  "background_color": "#ffffff"
+}

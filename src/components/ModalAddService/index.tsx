@@ -24,8 +24,15 @@ import {
   doc,
   updateDoc,
 } from "firebase/firestore";
+import { FirebaseError } from "firebase/app";
 import { auth, db } from "../../firebase.ts";
 import { serviceSchema } from "./serviceSchema.ts";
+// import { sendNotificationEmail } from "../../services/notificationEmail.ts";
+import {
+  normalizeServiceType,
+  SERVICE_TYPES,
+  SERVICE_TYPE_LABELS,
+} from "../../constants/serviceTypes.ts";
 import {
   BoxButtons,
   ButtonCancel,
@@ -33,6 +40,8 @@ import {
   Container,
   TextModal,
 } from "./styles.ts";
+import { createCalendarEvent } from "../../services/calendarService.ts";
+import { useAuth } from "../../contexts/AuthContext.tsx";
 
 type FormValues = {
   clientName: string;
@@ -47,7 +56,7 @@ export type ModalAddServiceInitialData = {
   clientName: string;
   serviceType: string;
   description?: string;
-  valueService: string;
+  valueService: number | string;
   notificationDate: { toDate: () => Date } | null;
 };
 
@@ -65,6 +74,8 @@ type ModalAddServiceProps = {
   setShowModal: (showModal: boolean) => void;
   serviceId?: string;
   initialData?: ModalAddServiceInitialData;
+  onSuccess?: (message: string) => void;
+  onError?: (message: string) => void;
 };
 
 export const ModalAddService = ({
@@ -72,9 +83,12 @@ export const ModalAddService = ({
   setShowModal,
   serviceId,
   initialData,
+  onSuccess,
+  onError,
 }: ModalAddServiceProps) => {
   const servicesRef = collection(db, "services");
   const isEdit = Boolean(serviceId && initialData);
+  const { accessToken } = useAuth();
 
   const {
     control,
@@ -95,9 +109,9 @@ export const ModalAddService = ({
       const hasNotification = !!initialData.notificationDate;
       reset({
         clientName: initialData.clientName,
-        serviceType: initialData.serviceType,
+        serviceType: normalizeServiceType(initialData.serviceType),
         description: initialData.description,
-        valueService: initialData.valueService,
+        valueService: String(initialData.valueService ?? "").replace(",", "."),
         notify: hasNotification,
         notificationDate:
           hasNotification && initialData.notificationDate
@@ -109,39 +123,77 @@ export const ModalAddService = ({
     }
   }, [showModal, isEdit, initialData, reset]);
 
+  const toUserErrorMessage = (error: unknown) => {
+    if (error instanceof FirebaseError) {
+      const byCode: Record<string, string> = {
+        "permission-denied":
+          "Sem permissao para salvar. Verifique as regras do Firestore.",
+        unauthenticated: "Sessao expirada. Faca login novamente.",
+        unavailable: "Firebase indisponivel no momento. Tente novamente.",
+      };
+      return byCode[error.code] || `${error.code}: ${error.message}`;
+    }
+    if (error instanceof Error) return error.message;
+    return "Nao foi possivel salvar o servico no Firebase.";
+  };
+
   const onSubmit = async (data: FormValues) => {
     const user = auth.currentUser;
-    if (!user) return;
+    if (!user) {
+      onError?.("Usuario nao autenticado. Faca login novamente.");
+      return;
+    }
+
+    const normalizedServiceType = normalizeServiceType(data.serviceType);
+    const parsedValue = Number.parseFloat(
+      String(data.valueService).replace(",", "."),
+    );
+    const notificationTimestamp =
+      data.notify && data.notificationDate
+        ? Timestamp.fromDate(data.notificationDate.toDate())
+        : null;
     try {
       if (isEdit && serviceId) {
         await updateDoc(doc(db, "services", serviceId), {
           clientName: data.clientName,
-          serviceType: data.serviceType,
+          serviceType: normalizedServiceType,
           description: data?.description,
-          valueService: data.valueService,
-          notificationDate:
-            data.notify && data.notificationDate
-              ? Timestamp.fromDate(data.notificationDate.toDate())
-              : null,
+          valueService: parsedValue,
+          notificationDate: notificationTimestamp,
+          updatedAt: Timestamp.now(),
         });
       } else {
         await addDoc(servicesRef, {
           clientName: data.clientName,
-          serviceType: data.serviceType,
+          serviceType: normalizedServiceType,
           description: data?.description,
-          valueService: data.valueService,
-          notificationDate:
-            data.notify && data.notificationDate
-              ? Timestamp.fromDate(data.notificationDate.toDate())
-              : null,
+          valueService: parsedValue,
+          notificationDate: notificationTimestamp,
           userId: user.uid,
           createdAt: Timestamp.now(),
+          updatedAt: Timestamp.now(),
+          manutencoes: [],
         });
       }
+
+      if (notificationTimestamp && accessToken) {
+        await createCalendarEvent(accessToken, {
+          clientName: data.clientName,
+          serviceType: data.serviceType,
+          notificationDate: notificationTimestamp.toDate(),
+        });
+      }
+
       reset(defaultValues);
       setShowModal(false);
+      onSuccess?.(
+        isEdit
+          ? "Servico atualizado com sucesso."
+          : "Servico salvo com sucesso.",
+      );
     } catch (error) {
-      console.error(error);
+      console.error("Erro ao salvar servico:", error);
+      onError?.(toUserErrorMessage(error));
     }
   };
 
@@ -150,14 +202,16 @@ export const ModalAddService = ({
       open={showModal}
       onClose={() => setShowModal(false)}
       children={
-        <LocalizationProvider 
+        <LocalizationProvider
           dateAdapter={AdapterDayjs}
           adapterLocale="pt-br"
-          localeText={ptBR.components.MuiLocalizationProvider.defaultProps.localeText}
+          localeText={
+            ptBR.components.MuiLocalizationProvider.defaultProps.localeText
+          }
         >
           <Container>
             <TextModal>
-              {isEdit ? "Editar Serviço" : "Adcionar Novo Serviço"}
+              {isEdit ? "Editar Servico" : "Adicionar Novo Servico"}
             </TextModal>
             <form onSubmit={handleSubmit(onSubmit)}>
               <Grid container spacing={2} marginBottom={2}>
@@ -183,16 +237,11 @@ export const ModalAddService = ({
                           displayEmpty
                         >
                           <MenuItem value="">Selecione</MenuItem>
-                          <MenuItem value="arcondicionado">
-                            Arcondicionado
-                          </MenuItem>
-                          <MenuItem value="sistemas_solares">
-                            Sistemas Solares
-                          </MenuItem>
-                          <MenuItem value="motor_portao">
-                            Motor de Portão
-                          </MenuItem>
-                          <MenuItem value="cameras">Câmeras</MenuItem>
+                          {SERVICE_TYPES.map((serviceType) => (
+                            <MenuItem key={serviceType} value={serviceType}>
+                              {SERVICE_TYPE_LABELS[serviceType]}
+                            </MenuItem>
+                          ))}
                         </Select>
                         {errors.serviceType && (
                           <FormHelperText error>
@@ -205,7 +254,7 @@ export const ModalAddService = ({
                 </Grid>
                 <Grid size={12}>
                   <TextField
-                    label="Descrição do Serviço"
+                    label="Descricao do Servico"
                     {...register("description")}
                     error={!!errors.description}
                     helperText={errors.description?.message}
@@ -214,7 +263,7 @@ export const ModalAddService = ({
                 </Grid>
                 <Grid size={6}>
                   <TextField
-                    label="Valor do Serviço"
+                    label="Valor do Servico"
                     type="number"
                     inputProps={{ step: "0.01", min: "0" }}
                     {...register("valueService")}
@@ -245,7 +294,7 @@ export const ModalAddService = ({
                       control={control}
                       render={({ field }) => (
                         <>
-                          <Typography>Data de Notificação:</Typography>
+                          <Typography>Data de Notificacao:</Typography>
                           <DatePicker
                             value={field.value || dayjs()}
                             onChange={(date) => field.onChange(date)}

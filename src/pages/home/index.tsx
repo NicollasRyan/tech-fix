@@ -1,10 +1,24 @@
 import { useEffect, useState } from "react";
-
 import Grid from "@mui/material/GridLegacy";
-
-import { Container, MenuItem } from "@mui/material";
+import {
+  Alert,
+  AlertTitle,
+  Container,
+  MenuItem,
+  Snackbar,
+} from "@mui/material";
+import { collection, onSnapshot, query, where } from "firebase/firestore";
+import { onAuthStateChanged } from "firebase/auth";
 import { CardService } from "../../components/CardService/index.tsx";
 import { ModalAddService } from "../../components/ModalAddService/index.tsx";
+import { auth, db } from "../../firebase.ts";
+import {
+  normalizeServiceType,
+  SERVICE_TYPES,
+  SERVICE_TYPE_LABELS,
+  type ServiceType,
+} from "../../constants/serviceTypes.ts";
+import type { ServiceDoc } from "../../types/service.ts";
 import {
   BoxNav,
   BoxSelect,
@@ -14,34 +28,27 @@ import {
   LinkToService,
   SelectTypeService,
 } from "./styles.ts";
-import { collection, onSnapshot, query, where } from "firebase/firestore";
-import { onAuthStateChanged } from "firebase/auth";
-import { auth, db } from "../../firebase.ts";
+import { useAuth } from "../../contexts/AuthContext.tsx";
+import { useNavigate } from "react-router-dom";
 
-export type ServiceDoc = {
-  manutencoes: any;
-  id: string;
-  clientName: string;
-  serviceType: string;
-  description: string;
-  valueService: string;
-  notificationDate: { toDate: () => Date } | null;
-  userId: string;
-  createdAt: { toDate: () => Date };
-};
-
-const serviceTypeLabels: Record<string, string> = {
-  all: "todos...",
-  arcondicionado: "Arcondicionado",
-  sistemas_solares: "Sistemas Solares",
-  motor_portao: "Motor de Portão",
-  cameras: "Câmeras",
-};
+type FilterType = "all" | ServiceType;
 
 function Home() {
-  const [showModal, setShowModal] = useState(false);
   const [services, setServices] = useState<ServiceDoc[]>([]);
-  const [filter, setFilter] = useState<string>("all");
+  const [filter, setFilter] = useState<FilterType>("all");
+  const [toastOpen, setToastOpen] = useState(false);
+  const [toastMessage, setToastMessage] = useState("");
+  const [toastSeverity, setToastSeverity] = useState<"success" | "error">(
+    "success",
+  );
+  const { googleConnected } = useAuth();
+  const navigate = useNavigate();
+
+  const showToast = (message: string, severity: "success" | "error") => {
+    setToastMessage(message);
+    setToastSeverity(severity);
+    setToastOpen(true);
+  };
 
   useEffect(() => {
     let unsubscribeSnapshot: (() => void) | undefined;
@@ -51,22 +58,25 @@ function Home() {
         setServices([]);
         return;
       }
+
       const servicesRef = collection(db, "services");
       const q = query(servicesRef, where("userId", "==", user.uid));
       unsubscribeSnapshot = onSnapshot(q, (snapshot) => {
-        const list = snapshot.docs.map((doc) => ({
-          id: doc.id,
-          ...doc.data(),
+        const list = snapshot.docs.map((serviceDoc) => ({
+          id: serviceDoc.id,
+          ...serviceDoc.data(),
         })) as ServiceDoc[];
-        // Ordenação no cliente como fallback (do mais recente para o mais antigo)
+
         list.sort((a, b) => {
           const ta = a?.createdAt?.toDate ? a.createdAt.toDate().getTime() : 0;
           const tb = b?.createdAt?.toDate ? b.createdAt.toDate().getTime() : 0;
           return tb - ta;
         });
+
         setServices(list);
       });
     });
+
     return () => {
       unsubscribeAuth();
       unsubscribeSnapshot?.();
@@ -77,57 +87,81 @@ function Home() {
     <Container>
       <BoxNav>
         <BoxSelect>
-          <Label>Tipos de Serviço:</Label>
-        <SelectTypeService
-          sx={{
-            "& .MuiOutlinedInput-notchedOutline": {
-              border: "none",
-            },
-            "&:hover .MuiOutlinedInput-notchedOutline": {
-              border: "none",
-            },
-            "&.Mui-focused .MuiOutlinedInput-notchedOutline": {
-              border: "none",
-            },
-          }}
-          value={filter}
-          onChange={(e) => setFilter(e.target.value as string)}
-        >
-          {Object.entries(serviceTypeLabels).map(([key, label]) => (
-            <MenuItem key={key} value={key}>
-              {label}
-            </MenuItem>
-          ))}
-        </SelectTypeService>
+          <Label>Tipos de Servico:</Label>
+          <SelectTypeService
+            sx={{
+              "& .MuiOutlinedInput-notchedOutline": {
+                border: "none",
+              },
+              "&:hover .MuiOutlinedInput-notchedOutline": {
+                border: "none",
+              },
+              "&.Mui-focused .MuiOutlinedInput-notchedOutline": {
+                border: "none",
+              },
+            }}
+            value={filter}
+            onChange={(e) => setFilter(e.target.value as FilterType)}
+          >
+            <MenuItem value="all">Todos...</MenuItem>
+            {SERVICE_TYPES.map((serviceType) => (
+              <MenuItem key={serviceType} value={serviceType}>
+                {SERVICE_TYPE_LABELS[serviceType]}
+              </MenuItem>
+            ))}
+          </SelectTypeService>
         </BoxSelect>
-        <ButtonAddService onClick={() => setShowModal(true)}>
-          Adcionar Serviço +
+        <ButtonAddService onClick={() => navigate("/addService")}>
+          Adicionar Servico +
         </ButtonAddService>
       </BoxNav>
+
+      {googleConnected ? (
+        <></>
+      ) : (
+        <Alert severity="warning" sx={{ mb: 2 }}>
+          <AlertTitle>Google Calendar não conectado</AlertTitle>
+          Para usar a funcionalidade de notificações, conecte sua conta do
+          Google Calendar nas configurações do perfil.
+        </Alert>
+      )}
 
       <BoxServices>
         <Grid container spacing={2}>
           {services
-            .filter((s) => (filter === "all" ? true : s.serviceType === filter))
-            .map((s) => (
-            <Grid item xs={12} md={6} lg={4} key={s.id}>
-              <LinkToService to={`/serviceDetails/${s.id}`}>
-                <CardService
-                  serviceType={
-                    serviceTypeLabels[s.serviceType] ?? s?.serviceType
-                  }
-                  clientName={s?.clientName}
-                  createdAt={s?.createdAt}
-                  notificationDate={s?.notificationDate}
-                />
-              </LinkToService>
-            </Grid>
-          ))}
+            .filter((service) =>
+              filter === "all"
+                ? true
+                : normalizeServiceType(service.serviceType) === filter,
+            )
+            .map((service) => (
+              <Grid item xs={12} md={6} lg={4} key={service.id}>
+                <LinkToService to={`/serviceDetails/${service.id}`}>
+                  <CardService
+                    serviceType={service.serviceType}
+                    clientName={service.clientName}
+                    createdAt={service.createdAt as { toDate: () => Date }}
+                  />
+                </LinkToService>
+              </Grid>
+            ))}
         </Grid>
       </BoxServices>
-      {showModal && (
-        <ModalAddService showModal={showModal} setShowModal={setShowModal} />
-      )}
+      <Snackbar
+        open={toastOpen}
+        autoHideDuration={3000}
+        onClose={() => setToastOpen(false)}
+        anchorOrigin={{ vertical: "top", horizontal: "right" }}
+      >
+        <Alert
+          onClose={() => setToastOpen(false)}
+          severity={toastSeverity}
+          variant="filled"
+          sx={{ width: "100%" }}
+        >
+          {toastMessage}
+        </Alert>
+      </Snackbar>
     </Container>
   );
 }

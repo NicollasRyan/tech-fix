@@ -3,10 +3,11 @@ import { DatePicker } from "@mui/x-date-pickers/DatePicker";
 import { LocalizationProvider } from "@mui/x-date-pickers/LocalizationProvider";
 import { AdapterDayjs } from "@mui/x-date-pickers/AdapterDayjs";
 import { ptBR } from "@mui/x-date-pickers/locales";
-import dayjs from "dayjs";
+import dayjs, { Dayjs } from "dayjs";
 import { useState } from "react";
 import { doc, updateDoc, Timestamp } from "firebase/firestore";
-import { db } from "../../firebase.ts";
+import { auth, db } from "../../firebase.ts";
+import { sendNotificationEmail } from "../../services/notificationEmail.ts";
 import {
   BoxButtons,
   ButtonCancel,
@@ -14,12 +15,16 @@ import {
   Container,
   TextModal,
 } from "./styles.ts";
+import { createCalendarEvent } from "../../services/calendarService.ts";
+import { useAuth } from "../../contexts/AuthContext.tsx";
 
 type Props = {
   showModal: boolean;
   setShowModal: (value: boolean) => void;
   serviceId: string;
   fetchService: () => void;
+  clientName?: string;
+  serviceType?: string;
 };
 
 export const ModalAddNotification = ({
@@ -27,15 +32,27 @@ export const ModalAddNotification = ({
   setShowModal,
   serviceId,
   fetchService,
+  clientName = "Cliente",
+  serviceType = "Servico",
 }: Props) => {
-  const [date, setDate] = useState<any>(null);
+  const [date, setDate] = useState<Dayjs | null>(null);
+  const { accessToken } = useAuth();
 
   const handleSave = async () => {
     if (!date) return;
 
     await updateDoc(doc(db, "services", serviceId), {
       notificationDate: Timestamp.fromDate(date.toDate()),
+      updatedAt: Timestamp.now(),
     });
+
+    if (accessToken) {
+      await createCalendarEvent(accessToken, {
+        clientName,
+        serviceType,
+        notificationDate: date.toDate(),
+      });
+    }
 
     setShowModal(false);
     fetchService();
@@ -43,10 +60,12 @@ export const ModalAddNotification = ({
 
   return (
     <Modal open={showModal} onClose={() => setShowModal(false)}>
-      <LocalizationProvider 
+      <LocalizationProvider
         dateAdapter={AdapterDayjs}
         adapterLocale="pt-br"
-        localeText={ptBR.components.MuiLocalizationProvider.defaultProps.localeText}
+        localeText={
+          ptBR.components.MuiLocalizationProvider.defaultProps.localeText
+        }
       >
         <Container>
           <TextModal>Adicionar notificação</TextModal>
