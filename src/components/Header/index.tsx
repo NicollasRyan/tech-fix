@@ -2,7 +2,7 @@ import { Person } from "@mui/icons-material";
 import { HeaderContainer, UserMenu } from "./styles.ts";
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { MenuItem, Menu, Modal } from "@mui/material";
+import { MenuItem, Menu } from "@mui/material";
 import { signOut } from "firebase/auth";
 import { auth } from "../../firebase.ts";
 import { ModalLogout } from "../ModalLogout/index.tsx";

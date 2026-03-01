@@ -28,7 +28,7 @@ import {
   ContainerProfile,
   ButtonEdit,
 } from "./styles.ts";
-import { Box, CircularProgress, Container, IconButton } from "@mui/material";
+import { Box, Button, CircularProgress, Container, IconButton } from "@mui/material";
 import { ModalLogout } from "../../components/ModalLogout/index.tsx";
 import ArrowBackIcon from "@mui/icons-material/ArrowBack";
 
@@ -139,7 +139,7 @@ function Profile() {
             <ArrowBackIcon />
           </IconButton>
           <Box>
-            <Title>Editar Perfil</Title>
+            <Title>Meu Perfil</Title>
           </Box>
         </Box>
         <ActionButtons>
@@ -171,10 +171,9 @@ function Profile() {
         <InfoRow>
           <InfoLabel>Conta Google</InfoLabel>
 
-          <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
-            {/* Status */}
+          <Box display="flex" alignItems="center" gap={1.5} flexWrap="wrap">
             <InfoValue
-              style={{
+              sx={{
                 color: googleConnected ? "#2e7d32" : "#d32f2f",
                 fontWeight: 600,
               }}
@@ -182,39 +181,47 @@ function Profile() {
               {googleConnected ? "● Conectada" : "● Não conectada"}
             </InfoValue>
 
-            {/* Botão */}
             {googleConnected ? (
-              <button
+              <Button
                 onClick={disconnectGoogleCalendar}
-                style={{
-                  padding: "6px 14px",
-                  borderRadius: 8,
-                  border: "1px solid #d32f2f",
-                  background: "transparent",
+                variant="outlined"
+                size="small"
+                sx={{
+                  borderRadius: 2,
+                  borderColor: "#d32f2f",
                   color: "#d32f2f",
-                  cursor: "pointer",
-                  fontWeight: 500,
+                  fontWeight: 600,
+                  textTransform: "none",
+                  "&:hover": {
+                    borderColor: "#b71c1c",
+                    backgroundColor: "rgba(211, 47, 47, 0.04)",
+                  },
                 }}
               >
                 Desconectar
-              </button>
+              </Button>
             ) : (
-              <button
+              <Button
                 onClick={connectGoogleCalendar}
-                style={{
-                  padding: "6px 14px",
-                  borderRadius: 8,
-                  border: "none",
-                  background: "#4285F4",
-                  color: "#fff",
-                  cursor: "pointer",
-                  fontWeight: 500,
+                variant="contained"
+                size="small"
+                disabled={googleLoading}
+                sx={{
+                  borderRadius: 2,
+                  backgroundColor: "#4285F4",
+                  fontWeight: 600,
+                  textTransform: "none",
+                  boxShadow: "0 2px 8px rgba(66, 133, 244, 0.35)",
+                  "&:hover": {
+                    backgroundColor: "#3367D6",
+                    boxShadow: "0 4px 12px rgba(66, 133, 244, 0.4)",
+                  },
                 }}
               >
                 {googleLoading ? "Conectando..." : "Conectar Google"}
-              </button>
+              </Button>
             )}
-          </div>
+          </Box>
         </InfoRow>
 
         <InfoRow>

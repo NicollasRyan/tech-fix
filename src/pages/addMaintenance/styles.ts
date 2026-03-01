@@ -6,43 +6,36 @@ export const FormCard = styled(Paper)`
   border-radius: 16px;
   box-shadow: 0 4px 20px rgba(0, 0, 0, 0.06);
   border: 1px solid #eee;
-`;
-
-export const Title = styled(Typography)`
-  font-size: 26px;
-  font-weight: 700;
-  color: #1a1a1a;
-  letter-spacing: -0.02em;
+  margin-top: 16px;
 `;
 
 export const Text = styled(Typography)`
-  font-size: 16px;
-  font-weight: 600;
-  color: #0d47a1;
-  letter-spacing: 0.02em;
-`;
-
-export const BoxLine = styled(Box)`
-  display: flex;
-  border-top: 1px solid #e8e8e8;
-  padding: 20px 0;
-  margin-top: 8px;
-`;
-
-export const BoxHeader = styled(Box)`
-  display: flex;
-  align-items: center;
+  font-size: 26px;
+  font-weight: 700;
+  color: #1a1a1a;
   margin-bottom: 24px;
   padding-bottom: 16px;
   border-bottom: 1px solid #eee;
+  letter-spacing: -0.02em;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+`;
+
+export const Label = styled(Typography)`
+  font-size: 14px;
+  font-weight: 600;
+  margin-bottom: 8px;
+  color: #424242;
+  display: block;
 `;
 
 export const BoxButtons = styled(Box)`
   display: flex;
   justify-content: flex-end;
   gap: 12px;
-  padding: 24px 0 8px;
-  margin-top: 8px;
+  padding-top: 24px;
+  margin-top: 24px;
   border-top: 1px solid #e8e8e8;
 `;
 
@@ -73,12 +66,4 @@ export const ButtonCancel = styled(Button)`
     background-color: #eeeeee;
     color: #1a1a1a;
   }
-`;
-
-export const Label = styled(Typography)`
-  font-size: 14px;
-  font-weight: 600;
-  margin-bottom: 8px;
-  color: #424242;
-  display: block;
 `;

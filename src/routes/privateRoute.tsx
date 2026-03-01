@@ -5,9 +5,9 @@ import { useAuth } from "../contexts/AuthContext.tsx";
 import { Header } from "../components/Header/index.tsx";
 
 const PrivateRoute = () => {
-  const { user, loading } = useAuth();
+  const { user, loadingAuth } = useAuth();
 
-  if (loading) {
+  if (loadingAuth) {
     return (
       <Box
         display="flex"

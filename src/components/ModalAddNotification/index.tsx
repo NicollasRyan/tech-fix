@@ -6,8 +6,7 @@ import { ptBR } from "@mui/x-date-pickers/locales";
 import dayjs, { Dayjs } from "dayjs";
 import { useState } from "react";
 import { doc, updateDoc, Timestamp } from "firebase/firestore";
-import { auth, db } from "../../firebase.ts";
-import { sendNotificationEmail } from "../../services/notificationEmail.ts";
+import { db } from "../../firebase.ts";
 import {
   BoxButtons,
   ButtonCancel,
@@ -59,7 +58,18 @@ export const ModalAddNotification = ({
   };
 
   return (
-    <Modal open={showModal} onClose={() => setShowModal(false)}>
+    <Modal
+      open={showModal}
+      onClose={() => setShowModal(false)}
+      slotProps={{
+        backdrop: {
+          sx: {
+            backgroundColor: "rgba(0, 0, 0, 0.5)",
+            backdropFilter: "blur(4px)",
+          },
+        },
+      }}
+    >
       <LocalizationProvider
         dateAdapter={AdapterDayjs}
         adapterLocale="pt-br"

@@ -5,6 +5,7 @@ export const ContainerEdit = styled(Container)`
   padding: 32px 16px;
   max-width: 600px;
   margin: 0 auto;
+  padding-top: 24px;
 `;
 
 export const Header = styled(Box)`
@@ -13,27 +14,32 @@ export const Header = styled(Box)`
   align-items: center;
   margin-bottom: 32px;
   gap: 16px;
+  padding-bottom: 20px;
+  border-bottom: 1px solid #eee;
 `;
 
 export const Title = styled(Typography)`
-  font-size: 32px;
-  font-weight: bold;
-  color: #000;
+  font-size: 28px;
+  font-weight: 700;
+  color: #1a1a1a;
+  letter-spacing: -0.02em;
 `;
 
 export const FormCard = styled(Card)`
   padding: 32px;
-  background-color: #f5f5f5;
-  border-radius: 8px;
+  background-color: #fff;
+  border-radius: 16px;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.06);
+  border: 1px solid #eee;
 `;
 
 export const FormGroup = styled(Box)`
   display: flex;
   flex-direction: column;
-  gap: 16px;
+  gap: 8px;
   margin-bottom: 24px;
 
-  &:last-child {
+  &:last-of-type {
     margin-bottom: 0;
   }
 `;
@@ -41,15 +47,24 @@ export const FormGroup = styled(Box)`
 export const FormLabel = styled(Typography)`
   font-size: 14px;
   font-weight: 600;
-  color: #444141;
-  margin-bottom: 8px;
+  color: #424242;
+  margin-bottom: 4px;
 `;
 
 export const StyledTextField = styled(TextField)`
   width: 100%;
 
   & .MuiOutlinedInput-root {
-    background-color: #fff;
+    background-color: #fafafa;
+    border-radius: 10px;
+
+    &:hover {
+      background-color: #fff;
+    }
+
+    &.Mui-focused {
+      background-color: #fff;
+    }
   }
 `;
 
@@ -59,32 +74,40 @@ export const FormActions = styled(Box)`
   justify-content: flex-end;
   margin-top: 32px;
   padding-top: 24px;
-  border-top: 1px solid #ddd;
+  border-top: 1px solid #eee;
 `;
 
 export const ButtonCancel = styled(Button)`
-  background-color: #e0e0e0;
-  color: #000;
-  text-transform: capitalize;
+  background-color: #f5f5f5;
+  color: #424242;
+  text-transform: none;
   padding: 10px 24px;
+  border-radius: 10px;
+  font-weight: 600;
 
   &:hover {
-    background-color: #d5d5d5;
+    background-color: #eeeeee;
+    color: #1a1a1a;
   }
 `;
 
 export const ButtonSave = styled(Button)`
-  background-color: #000;
+  background-color: #0d47a1;
   color: #fff;
-  text-transform: capitalize;
+  text-transform: none;
   padding: 10px 24px;
+  border-radius: 10px;
+  font-weight: 600;
+  box-shadow: 0 2px 8px rgba(13, 71, 161, 0.25);
 
   &:hover {
-    background-color: #333;
+    background-color: #1565c0;
+    box-shadow: 0 4px 12px rgba(13, 71, 161, 0.35);
   }
 
   &:disabled {
-    background-color: #ccc;
+    background-color: #90a4ae;
+    color: #fff;
     cursor: not-allowed;
   }
 `;
@@ -93,13 +116,16 @@ export const ErrorMessage = styled(Typography)`
   color: #d32f2f;
   font-size: 12px;
   margin-top: 4px;
+  font-weight: 500;
 `;
 
 export const SuccessMessage = styled(Box)`
-  background-color: #c8e6c9;
+  background: linear-gradient(135deg, #e8f5e9 0%, #c8e6c9 100%);
   color: #2e7d32;
-  padding: 12px 16px;
-  border-radius: 4px;
+  padding: 16px 20px;
+  border-radius: 12px;
   margin-bottom: 24px;
   font-size: 14px;
+  font-weight: 600;
+  border: 1px solid rgba(46, 125, 50, 0.2);
 `;

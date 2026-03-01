@@ -26,6 +26,14 @@ export const ModalLogout = ({
     <Modal
       open={showModal}
       onClose={() => setShowModal(false)}
+      slotProps={{
+        backdrop: {
+          sx: {
+            backgroundColor: "rgba(0, 0, 0, 0.5)",
+            backdropFilter: "blur(4px)",
+          },
+        },
+      }}
       children={
         <LocalizationProvider dateAdapter={AdapterDayjs}>
           <Container>

@@ -12,14 +12,17 @@ import { linkWithPopup } from "firebase/auth";
 import { doc, setDoc, updateDoc, getDoc } from "firebase/firestore";
 
 type AuthContextType = {
-  user: User | null;
-  accessToken: string | null;
-  connectGoogleCalendar: () => Promise<void>;
-  disconnectGoogleCalendar: () => Promise<void>;
-  googleConnected: boolean;
-  loading: boolean;
-  error: string | null;
-  googleLoading: boolean;
+  user?: User | null;
+  accessToken?: string | null;
+  connectGoogleCalendar?: () => Promise<void>;
+  disconnectGoogleCalendar?: () => Promise<void>;
+  googleConnected?: boolean;
+  loading?: boolean;
+  loadingAuth?: boolean;
+  loadingData?: boolean;
+  setLoadingData: (value: boolean) => void;
+  error?: string | null;
+  googleLoading?: boolean;
 };
 
 const AuthContext = createContext<AuthContextType | null>(null);
@@ -30,7 +33,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [googleConnected, setGoogleConnected] = useState(false);
   const [googleLoading, setGoogleLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [loading, setLoading] = useState<boolean>(true);
+  const [loadingAuth, setLoadingAuth] = useState<boolean>(true);
+  const [loadingData, setLoadingData] = useState<boolean>(true);
 
   const connectGoogleCalendar = async () => {
     if (!auth.currentUser) {
@@ -86,7 +90,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     const unsubscribe = onAuthStateChanged(auth, async (currentUser) => {
       if (currentUser) {
         setUser(currentUser);
-        setAccessToken(null); // 🔥 NÃO usar getIdToken()
+        setAccessToken(null);
 
         const userDoc = await getDoc(doc(db, "users", currentUser.uid));
 
@@ -102,7 +106,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         setGoogleConnected(false);
       }
 
-      setLoading(false);
+      setLoadingAuth(false);
     });
 
     return () => unsubscribe();
@@ -118,7 +122,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         googleConnected,
         googleLoading,
         error,
-        loading,
+        loadingAuth,
+        loadingData,
+        setLoadingData,
       }}
     >
       {children}

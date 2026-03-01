@@ -6,11 +6,12 @@ import {
   Container,
   MenuItem,
   Snackbar,
+  CircularProgress,
+  Box,
 } from "@mui/material";
 import { collection, onSnapshot, query, where } from "firebase/firestore";
 import { onAuthStateChanged } from "firebase/auth";
 import { CardService } from "../../components/CardService/index.tsx";
-import { ModalAddService } from "../../components/ModalAddService/index.tsx";
 import { auth, db } from "../../firebase.ts";
 import {
   normalizeServiceType,
@@ -28,8 +29,10 @@ import {
   LinkToService,
   SelectTypeService,
 } from "./styles.ts";
+import { NoService } from "../../components/NoService/index.tsx";
 import { useAuth } from "../../contexts/AuthContext.tsx";
 import { useNavigate } from "react-router-dom";
+import React from "react";
 
 type FilterType = "all" | ServiceType;
 
@@ -41,21 +44,17 @@ function Home() {
   const [toastSeverity, setToastSeverity] = useState<"success" | "error">(
     "success",
   );
-  const { googleConnected } = useAuth();
+  const { googleConnected, loadingData, setLoadingData } = useAuth();
   const navigate = useNavigate();
-
-  const showToast = (message: string, severity: "success" | "error") => {
-    setToastMessage(message);
-    setToastSeverity(severity);
-    setToastOpen(true);
-  };
 
   useEffect(() => {
     let unsubscribeSnapshot: (() => void) | undefined;
     const unsubscribeAuth = onAuthStateChanged(auth, (user) => {
       unsubscribeSnapshot?.();
+      setLoadingData(true);
       if (!user) {
         setServices([]);
+        setLoadingData(false);
         return;
       }
 
@@ -74,6 +73,7 @@ function Home() {
         });
 
         setServices(list);
+        setLoadingData(false);
       });
     });
 
@@ -127,25 +127,33 @@ function Home() {
       )}
 
       <BoxServices>
-        <Grid container spacing={2}>
-          {services
-            .filter((service) =>
-              filter === "all"
-                ? true
-                : normalizeServiceType(service.serviceType) === filter,
-            )
-            .map((service) => (
-              <Grid item xs={12} md={6} lg={4} key={service.id}>
-                <LinkToService to={`/serviceDetails/${service.id}`}>
-                  <CardService
-                    serviceType={service.serviceType}
-                    clientName={service.clientName}
-                    createdAt={service.createdAt as { toDate: () => Date }}
-                  />
-                </LinkToService>
-              </Grid>
-            ))}
-        </Grid>
+        {loadingData ? (
+          <Box sx={{ display: "flex", justifyContent: "center", p: 6 }}>
+            <CircularProgress />
+          </Box>
+        ) : services.length > 0 ? (
+          <Grid container spacing={2}>
+            {services
+              .filter((service) =>
+                filter === "all"
+                  ? true
+                  : normalizeServiceType(service.serviceType) === filter,
+              )
+              .map((service) => (
+                <Grid item xs={12} md={6} lg={4} key={service.id}>
+                  <LinkToService to={`/serviceDetails/${service.id}`}>
+                    <CardService
+                      serviceType={service.serviceType}
+                      clientName={service.clientName}
+                      createdAt={service.createdAt as { toDate: () => Date }}
+                    />
+                  </LinkToService>
+                </Grid>
+              ))}
+          </Grid>
+        ) : (
+          <NoService />
+        )}
       </BoxServices>
       <Snackbar
         open={toastOpen}

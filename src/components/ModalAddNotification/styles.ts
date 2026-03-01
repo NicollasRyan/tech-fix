@@ -6,44 +6,58 @@ export const Container = styled(Box)`
   top: 50%;
   left: 50%;
   transform: translate(-50%, -50%);
-  border-radius: 8px;
+  width: 100%;
+  max-width: 420px;
+  border-radius: 16px;
   background-color: #fff;
-  padding: 16px;
-  width: 400px;
+  padding: 28px 24px;
+  box-shadow: 0 24px 48px rgba(0, 0, 0, 0.14), 0 8px 16px rgba(0, 0, 0, 0.08);
+  outline: none;
 `;
 
 export const TextModal = styled(Typography)`
   font-size: 18px;
   font-weight: 700;
-  margin-bottom: 16px;
-  padding-bottom: 8px;
-  border-bottom: 1px solid #e0e0e0;
+  color: #1a1a1a;
+  margin-bottom: 20px;
+  padding-bottom: 16px;
+  border-bottom: 1px solid #eee;
 `;
 
 export const BoxButtons = styled(Box)`
   display: flex;
   justify-content: flex-end;
-  gap: 8px;
-  padding-top: 16px;
-  border-top: 1px solid #e0e0e0;
+  gap: 12px;
+  padding-top: 20px;
+  border-top: 1px solid #eee;
+  margin-top: 20px;
 `;
 
 export const ButtonSubmit = styled(Button)`
-  background-color: #000;
+  background-color: #0d47a1;
   color: #fff;
-  border-radius: 8px;
-  text-transform: capitalize;
+  border-radius: 10px;
+  text-transform: none;
+  font-weight: 600;
+  padding: 10px 20px;
+  box-shadow: 0 2px 8px rgba(13, 71, 161, 0.25);
 
   &:hover {
-    background-color: #333;
+    background-color: #1565c0;
+    box-shadow: 0 4px 12px rgba(13, 71, 161, 0.35);
   }
 `;
 
 export const ButtonCancel = styled(Button)`
-  background-color: #e0e0e0;
-  color: #000;
-  text-transform: capitalize;
+  background-color: #f5f5f5;
+  color: #424242;
+  border-radius: 10px;
+  text-transform: none;
+  font-weight: 600;
+  padding: 10px 20px;
+
   &:hover {
-    background-color: #d5d5d5;
+    background-color: #eeeeee;
+    color: #1a1a1a;
   }
 `;

@@ -34,6 +34,7 @@ export const ButtonAddService = styled(Button)`
   background-color: #000;
   color: #fff;
   border-radius: 8px;
+  font-weight: 600;
   padding: 0;
   width: 160px;
   text-transform: capitalize;

@@ -7,27 +7,32 @@ import PrivateRoute from "./privateRoute.tsx";
 import Profile from "../pages/profile/index.tsx";
 import ProfileEdit from "../pages/profile/edit/index.tsx";
 import { AddService } from "../pages/addService/index.tsx";
+import { AddMaintenance } from "../pages/addMaintenance/index.tsx";
 
 export function AppRoutes() {
-    return (
-        <BrowserRouter>
-            <Routes>
-                    {/* Rotas Públicas */}
-                    <Route path="login" element={<Login />} />
+  return (
+    <BrowserRouter>
+      <Routes>
+        {/* Rotas Públicas */}
+        <Route path="login" element={<Login />} />
 
-                    {/* Rotas Privadas (Protegidas) */}
-                    <Route element={<PrivateRoute />}>
-                    
-                        <Route index element={<Home />} />
+        {/* Rotas Privadas (Protegidas) */}
+        <Route element={<PrivateRoute />}>
+          <Route index element={<Home />} />
 
-                        <Route path="serviceDetails/:id" element={<ServiceDetails />} />
-                        <Route path="addService" element={<AddService />} />
-                        <Route path="edit-service/:id" element={<AddService  />} />
-                        <Route path="profile" element={<Profile />} />
-                        <Route path="profile/edit" element={<ProfileEdit />} />
-                        {/* Adicione outras rotas protegidas aqui */}
-                    </Route>
-            </Routes>
-        </BrowserRouter>
-    );
+          <Route path="serviceDetails/:id" element={<ServiceDetails />} />
+          <Route path="addService" element={<AddService />} />
+          <Route path="edit-service/:id" element={<AddService />} />
+          <Route
+            path="addMaintenance/:serviceId"
+            element={<AddMaintenance />}
+          />
+          <Route path="edit-maintenance/:serviceId/:maintenanceId" element={<AddMaintenance />} />
+          <Route path="profile" element={<Profile />} />
+          <Route path="profile/edit" element={<ProfileEdit />} />
+          {/* Adicione outras rotas protegidas aqui */}
+        </Route>
+      </Routes>
+    </BrowserRouter>
+  );
 }

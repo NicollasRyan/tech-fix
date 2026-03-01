@@ -1,18 +1,3 @@
-import {
-  Checkbox,
-  FormControlLabel,
-  FormHelperText,
-  Grid,
-  MenuItem,
-  Select,
-  TextField,
-  Container,
-  IconButton,
-} from "@mui/material";
-import { DatePicker } from "@mui/x-date-pickers/DatePicker";
-import { LocalizationProvider } from "@mui/x-date-pickers/LocalizationProvider";
-import { ArrowBack } from "@mui/icons-material";
-import dayjs, { Dayjs } from "dayjs";
 import { useEffect, useState } from "react";
 import { Controller, useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -41,18 +26,42 @@ import {
   Label,
   BoxLine,
   Title,
-  BoxHeader
+  BoxHeader,
+  FormCard,
 } from "./styles.ts";
 import { PatternFormat, NumericFormat } from "react-number-format";
 import { useAuth } from "../../contexts/AuthContext.tsx";
 import { createCalendarEvent } from "../../services/calendarService.ts";
 import { AdapterDayjs } from "@mui/x-date-pickers/AdapterDayjs";
 import { useNavigate, useParams } from "react-router-dom";
+import { ptBR } from "@mui/x-date-pickers/locales";
+
+import {
+  Checkbox,
+  FormControlLabel,
+  FormHelperText,
+  Grid,
+  MenuItem,
+  Select,
+  TextField,
+  Container,
+  IconButton,
+  InputAdornment,
+  Chip,
+  Box,
+} from "@mui/material";
+import { DatePicker } from "@mui/x-date-pickers/DatePicker";
+import { LocalizationProvider } from "@mui/x-date-pickers/LocalizationProvider";
+import "dayjs/locale/pt-br";
+import { Add, ArrowBack } from "@mui/icons-material";
+import dayjs, { Dayjs } from "dayjs";
+import React from "react";
+dayjs.locale("pt-br");
 
 type FormValues = {
   clientName: string;
   serviceType: string;
-  description?: string;
+  maintenance?: string;
   valueService: string;
   notify: boolean;
   notificationDate: Dayjs | null;
@@ -62,13 +71,13 @@ type FormValues = {
   address?: string;
   equipmentModel?: string;
   equipmentBrand?: string;
-  usedParts?: string;
+  usedParts?: string[];
 };
 
 export type ModalAddServiceInitialData = {
   clientName: string;
   serviceType: string;
-  description?: string;
+  maintenance?: string;
   valueService: number | string;
   notificationDate: { toDate: () => Date } | null;
   phone?: string;
@@ -77,13 +86,13 @@ export type ModalAddServiceInitialData = {
   address?: string;
   equipmentModel?: string;
   equipmentBrand?: string;
-  usedParts?: string;
+  usedParts?: string[];
 };
 
 const defaultValues: FormValues = {
   clientName: "",
   serviceType: "",
-  description: "",
+  maintenance: "",
   valueService: "",
   notify: false,
   notificationDate: null,
@@ -93,31 +102,28 @@ const defaultValues: FormValues = {
   address: "",
   equipmentModel: "",
   equipmentBrand: "",
-  usedParts: "",
+  usedParts: [],
 };
 
 type ModalAddServiceProps = {
-  propsServiceId?: string;
   propsInitialData?: ModalAddServiceInitialData;
   onSuccess?: (message: string) => void;
   onError?: (message: string) => void;
 };
 
 export const AddService = ({
-  propsServiceId,
   propsInitialData,
   onSuccess,
   onError,
 }: ModalAddServiceProps) => {
   const { id: paramServiceId } = useParams<{ id: string }>();
-  const serviceId = propsServiceId || paramServiceId;
   const [initialData, setInitialData] = useState<
     ModalAddServiceInitialData | undefined
   >(propsInitialData);
   const [loading, setLoading] = useState(false);
 
   const servicesRef = collection(db, "services");
-  const isEdit = Boolean(serviceId);
+  const isEdit = Boolean(paramServiceId);
   const { accessToken } = useAuth();
   const navigate = useNavigate();
 
@@ -127,9 +133,9 @@ export const AddService = ({
     const fetchServiceData = async () => {
       try {
         setLoading(true);
-        if (!serviceId) return;
+        if (!paramServiceId) return;
 
-        const docRef = doc(db, "services", serviceId);
+        const docRef = doc(db, "services", paramServiceId);
         const docSnap = await getDoc(docRef);
 
         if (docSnap.exists()) {
@@ -137,7 +143,7 @@ export const AddService = ({
           setInitialData({
             clientName: data.clientName,
             serviceType: data.serviceType,
-            description: data.description,
+            maintenance: data.maintenance,
             valueService: data.valueService,
             notificationDate: data.notificationDate,
             phone: data.phone,
@@ -158,7 +164,7 @@ export const AddService = ({
     };
 
     fetchServiceData();
-  }, [isEdit, serviceId, initialData, loading, onError]);
+  }, [isEdit, paramServiceId, initialData, loading, onError]);
 
   const {
     control,
@@ -166,12 +172,15 @@ export const AddService = ({
     register,
     reset,
     watch,
+    setValue,
     formState: { errors, isSubmitting },
   } = useForm<FormValues>({
     defaultValues,
     resolver: zodResolver(serviceSchema),
   });
   const notify = watch("notify");
+  const usedParts = watch("usedParts") ?? [];
+  const [pieceInput, setPieceInput] = useState("");
 
   useEffect(() => {
     if (isEdit && initialData) {
@@ -179,7 +188,7 @@ export const AddService = ({
       reset({
         clientName: initialData.clientName,
         serviceType: normalizeServiceType(initialData.serviceType),
-        description: initialData.description,
+        maintenance: initialData.maintenance,
         valueService: String(initialData.valueService ?? "").replace(",", "."),
         notify: hasNotification,
         notificationDate:
@@ -192,7 +201,7 @@ export const AddService = ({
         address: initialData.address || "",
         equipmentModel: initialData.equipmentModel || "",
         equipmentBrand: initialData.equipmentBrand || "",
-        usedParts: initialData.usedParts || "",
+        usedParts: initialData.usedParts || [],
       });
     } else {
       reset(defaultValues);
@@ -213,6 +222,19 @@ export const AddService = ({
     return "Nao foi possivel salvar o servico no Firebase.";
   };
 
+  const handleAddPiece = () => {
+    if (!pieceInput.trim()) return;
+
+    const updatedParts = [...usedParts, pieceInput.trim()];
+    setValue("usedParts", updatedParts);
+    setPieceInput("");
+  };
+
+  const handleRemovePiece = (index: number) => {
+    const updatedParts = usedParts.filter((_, i) => i !== index);
+    setValue("usedParts", updatedParts);
+  };
+
   const onSubmit = async (data: FormValues) => {
     const user = auth.currentUser;
     if (!user) {
@@ -221,19 +243,25 @@ export const AddService = ({
     }
 
     const normalizedServiceType = normalizeServiceType(data.serviceType);
-    const parsedValue = Number.parseFloat(
-      String(data.valueService).replace(",", "."),
-    );
+    const cleanedValue = String(data.valueService ?? "")
+      .replace(/[^0-9,.-]/g, "")
+      .replace(/\./g, "")
+      .replace(/,/g, ".");
+    const parsedValue = Number.parseFloat(cleanedValue);
     const notificationTimestamp =
       data.notify && data.notificationDate
         ? Timestamp.fromDate(data.notificationDate.toDate())
         : null;
+    if (isNaN(parsedValue) || parsedValue <= 0) {
+      onError?.("Valor do serviço inválido. Informe um número positivo.");
+      return;
+    }
     try {
-      if (isEdit && serviceId) {
-        await updateDoc(doc(db, "services", serviceId), {
+      if (isEdit && paramServiceId) {
+        const updateData: Record<string, any> = {
           clientName: data.clientName,
           serviceType: normalizedServiceType,
-          description: data?.description,
+          maintenance: data?.maintenance,
           valueService: parsedValue,
           notificationDate: notificationTimestamp,
           phone: data?.phone,
@@ -242,14 +270,16 @@ export const AddService = ({
           address: data?.address,
           equipmentModel: data?.equipmentModel,
           equipmentBrand: data?.equipmentBrand,
-          usedParts: data?.usedParts,
+          usedParts: data?.usedParts || [],
           updatedAt: Timestamp.now(),
-        });
+        };
+
+        await updateDoc(doc(db, "services", paramServiceId), updateData);
       } else {
-        await addDoc(servicesRef, {
+        const createData: Record<string, any> = {
           clientName: data.clientName,
           serviceType: normalizedServiceType,
-          description: data?.description,
+          maintenance: data?.maintenance,
           valueService: parsedValue,
           notificationDate: notificationTimestamp,
           phone: data?.phone,
@@ -258,12 +288,14 @@ export const AddService = ({
           address: data?.address,
           equipmentModel: data?.equipmentModel,
           equipmentBrand: data?.equipmentBrand,
-          usedParts: data?.usedParts,
+          usedParts: data?.usedParts || [],
           userId: user.uid,
           createdAt: Timestamp.now(),
           updatedAt: Timestamp.now(),
           manutencoes: [],
-        });
+        };
+
+        await addDoc(servicesRef, createData);
       }
 
       if (notificationTimestamp && accessToken) {
@@ -280,7 +312,7 @@ export const AddService = ({
           ? "Servico atualizado com sucesso."
           : "Servico salvo com sucesso.",
       );
-      navigate("/serviceDetails/" + (serviceId || ""));
+      navigate(isEdit ? "/serviceDetails/" + (paramServiceId || "") : "/");
     } catch (error) {
       console.error("Erro ao salvar servico:", error);
       onError?.(toUserErrorMessage(error));
@@ -288,16 +320,28 @@ export const AddService = ({
   };
 
   return (
-    <LocalizationProvider dateAdapter={AdapterDayjs} adapterLocale="ptBR">
-      <Container>
+    <LocalizationProvider
+      dateAdapter={AdapterDayjs}
+      adapterLocale="pt-br"
+      localeText={
+        ptBR.components.MuiLocalizationProvider.defaultProps.localeText
+      }
+    >
+      <Container maxWidth="md">
         <BoxHeader>
-          <IconButton onClick={() => navigate(isEdit ? "/serviceDetails/" + serviceId : "/")}>
+          <IconButton
+            onClick={() =>
+              navigate(isEdit ? "/serviceDetails/" + paramServiceId : "/")
+            }
+            sx={{ mr: 1 }}
+          >
             <ArrowBack />
           </IconButton>
-          <Title>{isEdit ? "Editar Servico" : "Adicionar Novo Servico"}</Title>
+          <Title>{isEdit ? "Editar Serviço" : "Adicionar Novo Serviço"}</Title>
         </BoxHeader>
         {isEdit && loading && <p>Carregando dados do serviço...</p>}
         {!loading && (
+          <FormCard elevation={0} sx={{ mt: 2 }}>
           <form onSubmit={handleSubmit(onSubmit)}>
             <Grid container spacing={2} marginBottom={2}>
               <Grid size={12}>
@@ -438,11 +482,11 @@ export const AddService = ({
                 />
               </Grid>
               <Grid size={12}>
-                <Label>Descrição do Serviço</Label>
+                <Label>Manutenção do Serviço (Opcional)</Label>
                 <TextField
-                  {...register("description")}
-                  error={!!errors.description}
-                  helperText={errors.description?.message}
+                  {...register("maintenance")}
+                  error={!!errors.maintenance}
+                  helperText={errors.maintenance?.message}
                   fullWidth
                 />
               </Grid>
@@ -466,14 +510,33 @@ export const AddService = ({
               </Grid>
               <Grid size={12}>
                 <Label>Peças Utilizadas (Opcional)</Label>
+
                 <TextField
-                  multiline
-                  rows={3}
-                  {...register("usedParts")}
-                  error={!!errors.usedParts}
-                  helperText={errors.usedParts?.message}
+                  value={pieceInput}
+                  onChange={(e) => setPieceInput(e.target.value)}
                   fullWidth
+                  placeholder="Digite a peça e clique em adicionar"
+                  slotProps={{
+                    input: {
+                      endAdornment: (
+                        <InputAdornment position="end">
+                          <ButtonSubmit onClick={handleAddPiece}>
+                            <Add />
+                          </ButtonSubmit>
+                        </InputAdornment>
+                      ),
+                    },
+                  }}
                 />
+                <Box sx={{ mt: 2, display: "flex", gap: 1, flexWrap: "wrap" }}>
+                  {usedParts?.map((piece, index) => (
+                    <Chip
+                      key={index}
+                      label={piece}
+                      onDelete={() => handleRemovePiece(index)}
+                    />
+                  ))}
+                </Box>
               </Grid>
               <Grid size={12}>
                 <Controller
@@ -492,7 +555,8 @@ export const AddService = ({
                   )}
                 />
                 {notify && (
-                  <Controller
+                 <Box>
+                   <Controller
                     name="notificationDate"
                     control={control}
                     render={({ field }) => (
@@ -502,6 +566,7 @@ export const AddService = ({
                           value={field.value || dayjs()}
                           onChange={(date) => field.onChange(date)}
                           minDate={dayjs()}
+                          format="DD/MM/YYYY"
                           slotProps={{ textField: { fullWidth: true } }}
                         />
                         {errors.notificationDate && (
@@ -512,6 +577,8 @@ export const AddService = ({
                       </>
                     )}
                   />
+                  
+                 </Box>
                 )}
               </Grid>
             </Grid>
@@ -525,6 +592,7 @@ export const AddService = ({
               </ButtonSubmit>
             </BoxButtons>
           </form>
+          </FormCard>
         )}
       </Container>
     </LocalizationProvider>
