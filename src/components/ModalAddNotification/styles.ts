@@ -2,17 +2,33 @@ import styled from "@emotion/styled";
 import { Box, Button, Typography } from "@mui/material";
 
 export const Container = styled(Box)`
-  position: absolute;
-  top: 50%;
-  left: 50%;
-  transform: translate(-50%, -50%);
+  position: relative;
   width: 100%;
   max-width: 420px;
+
+  margin: 40px auto;
+
   border-radius: 16px;
   background-color: #fff;
   padding: 28px 24px;
-  box-shadow: 0 24px 48px rgba(0, 0, 0, 0.14), 0 8px 16px rgba(0, 0, 0, 0.08);
-  outline: none;
+
+  box-shadow: 
+    0 24px 48px rgba(0, 0, 0, 0.14), 
+    0 8px 16px rgba(0, 0, 0, 0.08);
+
+  @media (max-width: 600px) {
+    width: 94%;
+    padding: 20px 16px;
+    margin: 24px auto;
+    border-radius: 14px;
+  }
+`;
+
+export const Label = styled(Typography)`
+  font-size: 14px;
+  font-weight: 600;
+  margin: 8px 0;
+  color: #424242;
 `;
 
 export const TextModal = styled(Typography)`

@@ -3,7 +3,6 @@ import { Box, Button, Typography } from "@mui/material";
 import { Link } from "react-router-dom";
 
 export const Container = styled(Box)`
-  height: 100vh;
   display: flex;
   align-items: center;
   justify-content: center;

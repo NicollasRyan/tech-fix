@@ -4,9 +4,11 @@ import {
   IconButton,
   Table,
   Typography,
-  Stack,
-  Chip,
-  Box,
+  Alert,
+  AlertTitle,
+  useTheme,
+  useMediaQuery,
+  Tooltip,
 } from "@mui/material";
 import {
   Timestamp,
@@ -15,7 +17,7 @@ import {
   getDoc,
   updateDoc,
 } from "firebase/firestore";
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import ArrowBackIcon from "@mui/icons-material/ArrowBack";
 import AddIcon from "@mui/icons-material/Add";
@@ -30,6 +32,8 @@ import {
   SERVICE_TYPE_LABELS,
 } from "../../constants/serviceTypes.ts";
 import {
+  ActionButtonGroup,
+  ActionIconButton,
   BoxActions,
   BoxButtons,
   BoxInfo,
@@ -38,22 +42,29 @@ import {
   ButtonAddNotification,
   ButtonDelete,
   ButtonEdit,
-  CardDateBox,
+  CardDateBadge,
   CardDescription,
   CardFooter,
-  CardParts,
-  CardRightContent,
+  CardHeader,
+  CardPartsSection,
   CardServiceContent,
   CardTitle,
-  CardTitleRow,
   CardValue,
+  DeleteIconButton,
+  DividerLine,
+  EditIconButton,
   EmptyMaintenances,
   InfoItem,
   InfoLabelCell,
   MaintenancesTitle,
+  PartsWrapper,
+  StyledChip,
   TableValue,
 } from "./styles.ts";
 import React from "react";
+import { useAuth } from "../../contexts/AuthContext.tsx";
+import { CardEquipment } from "../../components/CardEquipment/index.tsx";
+import { CalendarToday, NotificationAdd } from "@mui/icons-material";
 
 const CardService = ({
   title,
@@ -70,70 +81,62 @@ const CardService = ({
   const navigate = useNavigate();
   const safeParts = Array.isArray(usedParts) ? usedParts : [];
 
+  console.log(title);
+
   return (
     <CardServiceContent>
-      {/* Left date box */}
-      <CardDateBox>{date.toDate().toLocaleDateString("pt-BR")}</CardDateBox>
+      <CardHeader>
+        <CardTitle>{title}</CardTitle>
 
-      {/* Right content */}
-      <CardRightContent>
-        <CardTitleRow>
-          <CardTitle>{title}</CardTitle>
-          <CardValue>
-            <Typography>
-              {Number(valueService || 0).toLocaleString("pt-BR", {
-                style: "currency",
-                currency: "BRL",
-                minimumFractionDigits: 2,
-                maximumFractionDigits: 2,
-              })}
-            </Typography>
-          </CardValue>
-        </CardTitleRow>
+        <CardDateBadge>
+           <CalendarToday fontSize="small" />
+          {date.toDate().toLocaleDateString("pt-BR")}
+        </CardDateBadge>
+      </CardHeader>
 
-        <CardDescription>{description || "---"}</CardDescription>
+      <CardValue>
+        {Number(valueService || 0).toLocaleString("pt-BR", {
+          style: "currency",
+          currency: "BRL",
+        })}
+      </CardValue>
 
-        <CardFooter>
-          <CardParts>
-            <strong>Peças:</strong>
-            {safeParts && safeParts.length > 0 ? (
-              <Box sx={{ display: "flex", flexWrap: "wrap", gap: 0.5, mt: 1 }}>
-                {safeParts.map((part: string, index: number) => (
-                  <Chip key={index} label={part} size="small" sx={{ mt: 1 }} />
-                ))}
-              </Box>
-            ) : (
-              " -"
-            )}
-          </CardParts>
+      <DividerLine />
 
-          <Stack direction="row" spacing={1} alignItems="center">
-            <IconButton
-              size="small"
-              sx={{
-                backgroundColor: "#f5f5f5",
-                "&:hover": { backgroundColor: "#e0e0e0" },
-              }}
-              onClick={() =>
-                navigate(`/edit-maintenance/${id}/${maintenanceId}`)
-              }
-            >
-              <EditIcon fontSize="small" />
-            </IconButton>
+      <CardDescription>{description || "---"}</CardDescription>
 
-            <IconButton
-              onClick={() => setShowDeleteMaintenance(true)}
-              size="small"
-              sx={{
-                backgroundColor: "#fdecea",
-                "&:hover": { backgroundColor: "#f8d7da" },
-              }}
-            >
-              <DeleteIcon fontSize="small" color="error" />
-            </IconButton>
-          </Stack>
-        </CardFooter>
-      </CardRightContent>
+      <CardPartsSection>
+        <strong>Peças:</strong>
+
+        {safeParts && safeParts.length > 0 ? (
+          <PartsWrapper>
+            {safeParts.map((part: string, index: number) => (
+              <StyledChip key={index} label={part} size="small" />
+            ))}
+          </PartsWrapper>
+        ) : (
+          " -"
+        )}
+      </CardPartsSection>
+
+      <CardFooter>
+        <ActionButtonGroup>
+          <EditIconButton
+            size="small"
+            onClick={() => navigate(`/edit-maintenance/${id}/${maintenanceId}`)}
+          >
+            <EditIcon fontSize="small" />
+          </EditIconButton>
+
+          <DeleteIconButton
+            size="small"
+            onClick={() => setShowDeleteMaintenance(true)}
+          >
+            <DeleteIcon fontSize="small" />
+          </DeleteIconButton>
+        </ActionButtonGroup>
+      </CardFooter>
+
       <ModalDeleteService
         showModal={showDeleteMaintenance}
         setShowModal={setShowDeleteMaintenance}
@@ -146,6 +149,7 @@ const CardService = ({
 function ServiceDetails() {
   const { id } = useParams();
   const navigate = useNavigate();
+  const { googleConnected } = useAuth();
 
   const [service, setService] = useState<ServiceDoc | null>(null);
   const [loading, setLoading] = useState(true);
@@ -155,15 +159,17 @@ function ServiceDetails() {
 
   const safeParts = Array.isArray(service?.usedParts) ? service.usedParts : [];
 
-  const fetchService = () => {
+  const fetchService = useCallback(() => {
     if (!id) return;
+  
     const user = auth.currentUser;
     if (!user) {
       navigate("/login");
       return;
     }
-
+  
     setLoading(true);
+  
     getDoc(doc(db, "services", id))
       .then((snap) => {
         if (!snap.exists()) {
@@ -171,14 +177,15 @@ function ServiceDetails() {
           setLoading(false);
           return;
         }
-
+  
         const data = { id: snap.id, ...snap.data() } as ServiceDoc;
+  
         if (data.userId !== user.uid) {
           setLoading(false);
           navigate("/");
           return;
         }
-
+  
         setService(data);
         setLoading(false);
       })
@@ -186,11 +193,11 @@ function ServiceDetails() {
         console.error("getDoc error", err);
         setLoading(false);
       });
-  };
+  }, [id, navigate]);
 
   useEffect(() => {
     fetchService();
-  }, []);
+  }, [fetchService]);
 
   const deleteMaintenance = async (maintenanceId: string) => {
     if (!service) return;
@@ -219,6 +226,16 @@ function ServiceDetails() {
     }
   };
 
+  const notificationDate = service?.notificationDate?.toDate?.();
+  const today = new Date();
+
+  const isExpired =
+    notificationDate &&
+    notificationDate.setHours(0, 0, 0, 0) < today.setHours(0, 0, 0, 0);
+
+  const theme = useTheme();
+  const isMobile = useMediaQuery(theme.breakpoints.down("sm"));
+
   return (
     <Container>
       <BoxButtons>
@@ -226,185 +243,244 @@ function ServiceDetails() {
           <ArrowBackIcon />
         </IconButton>
         <BoxActions>
-          <ButtonAddModification
-            onClick={() => navigate(`/addMaintenance/${id}`)}
-          >
-            Adicionar Manuteção
-          </ButtonAddModification>
-          <ButtonEdit onClick={() => navigate("/edit-service/" + id)}>
-            Editar
-          </ButtonEdit>
-          <ButtonDelete onClick={() => setShowDeleteModal(true)}>
-            Deletar
-          </ButtonDelete>
+          {isMobile ? (
+            <>
+              <Tooltip title="Adicionar Manutenção">
+                <ActionIconButton
+                  variantcolor="success"
+                  onClick={() => navigate(`/addMaintenance/${id}`)}
+                >
+                  <AddIcon fontSize="small" />{" "}
+                  <Typography>Manutenção</Typography>
+                </ActionIconButton>
+              </Tooltip>
+
+              <Tooltip title="Editar">
+                <ActionIconButton
+                  variantcolor="primary"
+                  onClick={() => navigate("/edit-service/" + id)}
+                >
+                  <EditIcon fontSize="small" />
+                </ActionIconButton>
+              </Tooltip>
+
+              <Tooltip title="Deletar">
+                <ActionIconButton
+                  variantcolor="error"
+                  onClick={() => setShowDeleteModal(true)}
+                >
+                  <DeleteIcon fontSize="small" />
+                </ActionIconButton>
+              </Tooltip>
+            </>
+          ) : (
+            <>
+              <ButtonAddModification
+                onClick={() => navigate(`/addMaintenance/${id}`)}
+              >
+                Adicionar Manutenção
+              </ButtonAddModification>
+
+              <ButtonEdit onClick={() => navigate("/edit-service/" + id)}>
+                Editar
+              </ButtonEdit>
+
+              <ButtonDelete onClick={() => setShowDeleteModal(true)}>
+                Deletar
+              </ButtonDelete>
+            </>
+          )}
         </BoxActions>
       </BoxButtons>
       {!loading && service && (
         <>
-        <BoxInfo>
-          <Table>
-            {/* DATAS */}
-            <InfoItem>
-              <InfoLabelCell component="th" scope="row">
-                <strong>DATAS</strong>
-              </InfoLabelCell>
-              <TableValue />
-            </InfoItem>
+          <BoxInfo>
+            <Table>
+              <InfoItem>
+                <InfoLabelCell component="th" scope="row">
+                  Data de Criação
+                </InfoLabelCell>
+                <TableValue>
+                  {service.createdAt?.toDate?.()?.toLocaleDateString() ?? "-"}
+                </TableValue>
+              </InfoItem>
 
-            <InfoItem>
-              <InfoLabelCell component="th" scope="row">Data de Criação</InfoLabelCell>
-              <TableValue>
-                {service.createdAt?.toDate?.()?.toLocaleDateString() ?? "-"}
-              </TableValue>
-            </InfoItem>
+              <InfoItem>
+                <InfoLabelCell component="th" scope="row">
+                  Notificação
+                </InfoLabelCell>
+                <TableValue>
+                  {notificationDate && !isExpired ? (
+                    notificationDate.toLocaleDateString()
+                  ) : googleConnected ? (
+                    <>
+                      {isMobile ? (
+                        <Tooltip title="Adicionar Notificação">
+                          <ActionIconButton
+                            onClick={() => setShowNotificationModal(true)}
+                            size="small"
+                            variantcolor="primary"
+                          >
+                            <NotificationAdd />
+                          </ActionIconButton>
+                        </Tooltip>
+                      ) : (
+                        <ButtonAddNotification
+                          onClick={() => setShowNotificationModal(true)}
+                        >
+                          Adicionar Notificação <AddIcon />
+                        </ButtonAddNotification>
+                      )}
+                    </>
+                  ) : (
+                    <Alert severity="warning">
+                      <AlertTitle>Google Calendar não conectado</AlertTitle>
+                      Para usar notificações automáticas, conecte sua conta do
+                      Google nas configurações do perfil.
+                    </Alert>
+                  )}
+                </TableValue>
+              </InfoItem>
+              <InfoItem>
+                <InfoLabelCell component="th" scope="row">
+                  <strong>CLIENTE</strong>
+                </InfoLabelCell>
+                <TableValue />
+              </InfoItem>
 
-            <InfoItem>
-              <InfoLabelCell component="th" scope="row">Notificação</InfoLabelCell>
-              <TableValue>
-                {service.notificationDate?.toDate?.()?.toLocaleDateString() ?? (
-                  <ButtonAddNotification
-                    onClick={() => setShowNotificationModal(true)}
-                  >
-                    Adicionar Notificação <AddIcon />
-                  </ButtonAddNotification>
-                )}
-              </TableValue>
-            </InfoItem>
-            {/* DADOS DO CLIENTE */}
-            <InfoItem>
-              <InfoLabelCell component="th" scope="row">
-                <strong>CLIENTE</strong>
-              </InfoLabelCell>
-              <TableValue />
-            </InfoItem>
+              <InfoItem>
+                <InfoLabelCell component="th" scope="row">
+                  Nome
+                </InfoLabelCell>
+                <TableValue>{service.clientName || "-"}</TableValue>
+              </InfoItem>
 
-            <InfoItem>
-              <InfoLabelCell component="th" scope="row">Nome</InfoLabelCell>
-              <TableValue>{service.clientName || "-"}</TableValue>
-            </InfoItem>
+              <InfoItem>
+                <InfoLabelCell component="th" scope="row">
+                  Telefone
+                </InfoLabelCell>
+                <TableValue>{service.phone || "-"}</TableValue>
+              </InfoItem>
 
-            <InfoItem>
-              <InfoLabelCell component="th" scope="row">Telefone</InfoLabelCell>
-              <TableValue>{service.phone || "-"}</TableValue>
-            </InfoItem>
+              <InfoItem>
+                <InfoLabelCell component="th" scope="row">
+                  Email
+                </InfoLabelCell>
+                <TableValue>{service.email || "-"}</TableValue>
+              </InfoItem>
 
-            <InfoItem>
-              <InfoLabelCell component="th" scope="row">Email</InfoLabelCell>
-              <TableValue>{service.email || "-"}</TableValue>
-            </InfoItem>
+              <InfoItem>
+                <InfoLabelCell component="th" scope="row">
+                  CPF
+                </InfoLabelCell>
+                <TableValue>{service.cpf || "-"}</TableValue>
+              </InfoItem>
 
-            <InfoItem>
-              <InfoLabelCell component="th" scope="row">CPF</InfoLabelCell>
-              <TableValue>{service.cpf || "-"}</TableValue>
-            </InfoItem>
+              <InfoItem>
+                <InfoLabelCell component="th" scope="row">
+                  Cidade
+                </InfoLabelCell>
+                <TableValue>{service.city || "-"}</TableValue>
+              </InfoItem>
 
-            <InfoItem>
-              <InfoLabelCell component="th" scope="row">Endereço</InfoLabelCell>
-              <TableValue>{service.address || "-"}</TableValue>
-            </InfoItem>
+              <InfoItem>
+                <InfoLabelCell component="th" scope="row">
+                  Endereço
+                </InfoLabelCell>
+                <TableValue>{service.address || "-"}</TableValue>
+              </InfoItem>
+              <InfoItem>
+                <InfoLabelCell component="th" scope="row">
+                  <strong>SERVIÇO</strong>
+                </InfoLabelCell>
+                <TableValue />
+              </InfoItem>
 
-            {/* DADOS DO SERVIÇO */}
-            <InfoItem>
-              <InfoLabelCell component="th" scope="row">
-                <strong>SERVIÇO</strong>
-              </InfoLabelCell>
-              <TableValue />
-            </InfoItem>
+              <InfoItem>
+                <InfoLabelCell component="th" scope="row">
+                  Tipo de Serviço
+                </InfoLabelCell>
+                <TableValue>
+                  {
+                    SERVICE_TYPE_LABELS[
+                      normalizeServiceType(service.serviceType)
+                    ]
+                  }
+                </TableValue>
+              </InfoItem>
 
-            <InfoItem>
-              <InfoLabelCell component="th" scope="row">Tipo de Serviço</InfoLabelCell>
-              <TableValue>
-                {SERVICE_TYPE_LABELS[normalizeServiceType(service.serviceType)]}
-              </TableValue>
-            </InfoItem>
+              <InfoItem>
+                <InfoLabelCell component="th" scope="row">
+                  Valor
+                </InfoLabelCell>
+                <TableValue>
+                  {Number(service.valueService || 0).toLocaleString("pt-BR", {
+                    style: "currency",
+                    currency: "BRL",
+                    minimumFractionDigits: 2,
+                    maximumFractionDigits: 2,
+                  })}
+                </TableValue>
+              </InfoItem>
 
-            <InfoItem>
-              <InfoLabelCell component="th" scope="row">Valor</InfoLabelCell>
-              <TableValue>
-                {Number(service.valueService || 0).toLocaleString("pt-BR", {
-                  style: "currency",
-                  currency: "BRL",
-                  minimumFractionDigits: 2,
-                  maximumFractionDigits: 2,
-                })}
-              </TableValue>
-            </InfoItem>
+              <InfoItem>
+                <InfoLabelCell component="th" scope="row">
+                  Descrição
+                </InfoLabelCell>
+                <TableValue>{service.description || "-"}</TableValue>
+              </InfoItem>
+            </Table>
+          </BoxInfo>
 
-            {/* DADOS DO EQUIPAMENTO */}
-            <InfoItem>
-              <InfoLabelCell component="th" scope="row">
-                <strong>EQUIPAMENTO</strong>
-              </InfoLabelCell>
-              <TableValue />
-            </InfoItem>
+          <BoxMaintenances>
+            <MaintenancesTitle>Dados do Equipamento</MaintenancesTitle>
 
-            <InfoItem>
-              <InfoLabelCell component="th" scope="row">Modelo</InfoLabelCell>
-              <TableValue>{service.equipmentModel || "-"}</TableValue>
-            </InfoItem>
+            <CardEquipment
+              brand={service.equipmentBrand}
+              model={service.equipmentModel}
+              parts={safeParts}
+            />
+          </BoxMaintenances>
 
-            <InfoItem>
-              <InfoLabelCell component="th" scope="row">Marca</InfoLabelCell>
-              <TableValue>{service.equipmentBrand || "-"}</TableValue>
-            </InfoItem>
+          <BoxMaintenances>
+            <MaintenancesTitle>Manutenções</MaintenancesTitle>
+            {service.manutencoes && service.manutencoes.length === 0 ? (
+              <EmptyMaintenances>
+                <Typography color="text.secondary" sx={{ fontSize: 15 }}>
+                  Nenhuma manutenção registrada
+                </Typography>
+                <Typography
+                  color="text.secondary"
+                  sx={{ fontSize: 13, mt: 0.5 }}
+                >
+                  Clique em &quot;Adicionar Manutenção&quot; no topo da página
+                  para registrar uma.
+                </Typography>
+              </EmptyMaintenances>
+            ) : (
+              <Grid container spacing={2}>
+                {(service.manutencoes || []).map((maintenance: any) => (
+                  <Grid size={{ xs: 12, md: 6 }}>
+                    <CardService
+                      key={maintenance.id}
+                      id={service.id}
+                      maintenanceId={maintenance.id}
+                      title={maintenance.title}
+                      date={maintenance.createdAt}
+                      description={maintenance.description}
+                      valueService={maintenance.valueService}
+                      usedParts={maintenance.usedParts}
+                      showDeleteMaintenance={showDeleteMaintenance}
+                      setShowDeleteMaintenance={setShowDeleteMaintenance}
+                      submitAction={() => deleteMaintenance(maintenance.id)}
+                    />
+                  </Grid>
+                ))}
+              </Grid>
+            )}
+          </BoxMaintenances>
 
-            <InfoItem>
-              <InfoLabelCell component="th" scope="row">Peças Utilizadas</InfoLabelCell>
-              <TableValue>
-                {safeParts && safeParts.length > 0 ? (
-                  <Box sx={{ display: "flex", flexWrap: "wrap", gap: 0.5 }}>
-                    {safeParts.map((part: string, index: number) => (
-                      <Chip
-                        key={index}
-                        label={part}
-                        size="small"
-                        sx={{ mt: 1 }}
-                      />
-                    ))}
-                  </Box>
-                ) : (
-                  "-"
-                )}
-              </TableValue>
-            </InfoItem>
-          </Table>
-        </BoxInfo>
-
-        <BoxMaintenances>
-          <MaintenancesTitle>Manutenções</MaintenancesTitle>
-          {service.manutencoes && service.manutencoes.length === 0 ? (
-            <EmptyMaintenances>
-              <Typography color="text.secondary" sx={{ fontSize: 15 }}>
-                Nenhuma manutenção registrada
-              </Typography>
-              <Typography color="text.secondary" sx={{ fontSize: 13, mt: 0.5 }}>
-                Clique em &quot;Adicionar Manutenção&quot; no topo da página para registrar uma.
-              </Typography>
-            </EmptyMaintenances>
-          ) : (
-            <Grid container spacing={2}>
-              {(service.manutencoes || []).map((maintenance: any) => (
-                <Grid size={6}>
-                  <CardService
-                  key={maintenance.id}
-                  id={service.id}
-                  maintenanceId={maintenance.id}
-                  title={maintenance.title}
-                  date={maintenance.createdAt}
-                  description={maintenance.description}
-                  valueService={maintenance.valueService}
-                  usedParts={maintenance.usedParts}
-                  showDeleteMaintenance={showDeleteMaintenance}
-                  setShowDeleteMaintenance={setShowDeleteMaintenance}
-                  submitAction={() => deleteMaintenance(maintenance.id)}
-                />
-                </Grid>
-              ))}
-            </Grid>
-          )}
-        </BoxMaintenances>
-
-        <ModalAddNotification
+          <ModalAddNotification
             showModal={showNotificationModal}
             setShowModal={setShowNotificationModal}
             serviceId={service.id}

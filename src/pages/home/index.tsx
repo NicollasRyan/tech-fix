@@ -5,7 +5,6 @@ import {
   AlertTitle,
   Container,
   MenuItem,
-  Snackbar,
   CircularProgress,
   Box,
 } from "@mui/material";
@@ -39,13 +38,10 @@ type FilterType = "all" | ServiceType;
 function Home() {
   const [services, setServices] = useState<ServiceDoc[]>([]);
   const [filter, setFilter] = useState<FilterType>("all");
-  const [toastOpen, setToastOpen] = useState(false);
-  const [toastMessage, setToastMessage] = useState("");
-  const [toastSeverity, setToastSeverity] = useState<"success" | "error">(
-    "success",
-  );
   const { googleConnected, loadingData, setLoadingData } = useAuth();
   const navigate = useNavigate();
+
+  console.log("Google Connected:", googleConnected);
 
   useEffect(() => {
     let unsubscribeSnapshot: (() => void) | undefined;
@@ -81,7 +77,7 @@ function Home() {
       unsubscribeAuth();
       unsubscribeSnapshot?.();
     };
-  }, []);
+  }, [setLoadingData]);
 
   return (
     <Container>
@@ -144,6 +140,7 @@ function Home() {
                   <LinkToService to={`/serviceDetails/${service.id}`}>
                     <CardService
                       serviceType={service.serviceType}
+                      city={service?.city}
                       clientName={service.clientName}
                       createdAt={service.createdAt as { toDate: () => Date }}
                     />
@@ -155,21 +152,6 @@ function Home() {
           <NoService />
         )}
       </BoxServices>
-      <Snackbar
-        open={toastOpen}
-        autoHideDuration={3000}
-        onClose={() => setToastOpen(false)}
-        anchorOrigin={{ vertical: "top", horizontal: "right" }}
-      >
-        <Alert
-          onClose={() => setToastOpen(false)}
-          severity={toastSeverity}
-          variant="filled"
-          sx={{ width: "100%" }}
-        >
-          {toastMessage}
-        </Alert>
-      </Snackbar>
     </Container>
   );
 }

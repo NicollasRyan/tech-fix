@@ -13,10 +13,7 @@ export function AppRoutes() {
   return (
     <BrowserRouter>
       <Routes>
-        {/* Rotas Públicas */}
         <Route path="login" element={<Login />} />
-
-        {/* Rotas Privadas (Protegidas) */}
         <Route element={<PrivateRoute />}>
           <Route index element={<Home />} />
 
@@ -30,7 +27,6 @@ export function AppRoutes() {
           <Route path="edit-maintenance/:serviceId/:maintenanceId" element={<AddMaintenance />} />
           <Route path="profile" element={<Profile />} />
           <Route path="profile/edit" element={<ProfileEdit />} />
-          {/* Adicione outras rotas protegidas aqui */}
         </Route>
       </Routes>
     </BrowserRouter>

@@ -10,6 +10,7 @@ import {
   Container,
   TextModal,
 } from "./styles.ts";
+import React from "react";
 
 type ModalAddServiceProps = {
   showModal: boolean;

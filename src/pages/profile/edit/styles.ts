@@ -23,6 +23,10 @@ export const Title = styled(Typography)`
   font-weight: 700;
   color: #1a1a1a;
   letter-spacing: -0.02em;
+
+  @media (max-width: 600px) {
+    font-size: 22px;
+  }
 `;
 
 export const FormCard = styled(Card)`

@@ -1,5 +1,14 @@
 import styled from "@emotion/styled";
-import { Box, Button, TableCell, TableRow, Typography } from "@mui/material";
+import {
+  Box,
+  Button,
+  Chip,
+  IconButton,
+  Stack,
+  TableCell,
+  TableRow,
+  Typography,
+} from "@mui/material";
 
 export const BoxButtons = styled(Box)`
   display: flex;
@@ -14,6 +23,53 @@ export const BoxActions = styled(Box)`
   display: flex;
   gap: 10px;
   flex-wrap: wrap;
+`;
+
+export const ActionIconButton = styled(IconButton)<{ variantcolor: string }>`
+  border-radius: 14px;
+  padding: 10px;
+  transition: all 0.2s ease;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
+
+  p {
+    font-size: 14px;
+  }
+
+  ${({ variantcolor }) =>
+    variantcolor === "success" &&
+    `
+      background-color: rgba(46, 125, 50, 0.08);
+      color: #2e7d32;
+
+      &:hover {
+        background-color: rgba(46, 125, 50, 0.18);
+        transform: translateY(-2px);
+      }
+    `}
+
+  ${({ variantcolor }) =>
+    variantcolor === "primary" &&
+    `
+      background-color: rgba(25, 118, 210, 0.08);
+      color: #1976d2;
+
+      &:hover {
+        background-color: rgba(25, 118, 210, 0.18);
+        transform: translateY(-2px);
+      }
+    `}
+
+  ${({ variantcolor }) =>
+    variantcolor === "error" &&
+    `
+      background-color: rgba(211, 47, 47, 0.08);
+      color: #d32f2f;
+
+      &:hover {
+        background-color: rgba(211, 47, 47, 0.18);
+        transform: translateY(-2px);
+      }
+    `}
 `;
 
 export const ButtonEdit = styled(Button)`
@@ -163,97 +219,126 @@ export const TextClient = styled(Typography)`
 `;
 
 export const CardServiceContent = styled(Box)`
-  padding: 0;
-  border-radius: 16px;
-  background-color: #fff;
-  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.06);
-  margin-bottom: 16px;
-  overflow: hidden;
+  background: #ffffff;
+  border-radius: 18px;
+  padding: 24px;
+  margin-bottom: 18px;
+  border: 1px solid #eaeaea;
+  transition: all 0.25s ease;
   display: flex;
-  align-items: stretch;
-  border: 1px solid #eee;
-  transition: box-shadow 0.2s ease;
+  flex-direction: column;
+  gap: 18px;
 
   &:hover {
-    box-shadow: 0 8px 28px rgba(0, 0, 0, 0.08);
+    box-shadow: 0 12px 32px rgba(0, 0, 0, 0.06);
+    transform: translateY(-3px);
+  }
+
+  @media (max-width: 600px) {
+    padding: 18px;
   }
 `;
 
-export const CardDateBox = styled(Box)`
-  min-width: 96px;
-  background: linear-gradient(180deg, #e3f2fd 0%, #bbdefb 100%);
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  padding: 12px;
-`;
-
-export const CardDateDay = styled(Typography)`
-  font-size: 28px;
-  font-weight: 800;
-`;
-
-export const CardDateSeparator = styled(Typography)`
-  font-size: 14px;
-  font-weight: 700;
-  color: #718096;
-`;
-
-export const CardDateMonth = styled(Typography)`
-  font-size: 20px;
-  font-weight: 700;
-`;
-
-export const CardDateYear = styled(Typography)`
-  font-size: 12px;
-  font-weight: 600;
-  color: #4a4a4a;
-`;
-
-export const CardRightContent = styled(Box)`
-  flex: 1;
-  padding: 20px;
-`;
-
-export const CardTitleRow = styled(Box)`
+export const CardHeader = styled(Box)`
   display: flex;
   justify-content: space-between;
   align-items: flex-start;
 `;
 
 export const CardTitle = styled(Typography)`
+  font-size: 19px;
   font-weight: 700;
-  font-size: 18px;
-  color: #1a1a1a;
+  color: #1c1c1c;
+
+  @media (max-width: 600px) {
+    font-size: 16px;
+  }
+`;
+
+export const CardDateBadge = styled(Box)`
+  background: #f1f5f9;
+  color: #000;
+  font-family: 'Courier New', Courier, monospace;
+  font-size: 13px;
+  font-weight: 600;
+  padding: 6px 10px;
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
 `;
 
 export const CardValue = styled(Typography)`
-  font-weight: 700;
+  font-size: 22px;
+  font-weight: 800;
   color: #2e7d32;
-  font-size: 16px;
+  margin-top: -6px;
+
+  @media (max-width: 600px) {
+    font-size: 18px;
+  }
+`;
+
+export const DividerLine = styled(Box)`
+  height: 1px;
+  width: 100%;
+  background: #f0f0f0;
 `;
 
 export const CardDescription = styled(Typography)`
-  margin-top: 8px;
-  color: #616161;
   font-size: 14px;
-  line-height: 1.5;
+  color: #555;
+  line-height: 1.6;
 `;
 
-export const CardFooter = styled(Box)`
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-top: 16px;
-`;
-
-export const CardParts = styled(Typography)`
+export const CardPartsSection = styled(Box)`
   font-size: 13px;
   color: #616161;
 
   strong {
-    font-weight: 700;
-    color: #424242;
+    font-weight: 600;
+    color: #333;
+  }
+`;
+
+export const PartsWrapper = styled(Box)`
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 8px;
+`;
+
+export const StyledChip = styled(Chip)`
+  font-size: 12px;
+  background: #f5f5f5;
+`;
+
+export const CardFooter = styled(Box)`
+  display: flex;
+  justify-content: flex-end;
+`;
+
+export const ActionButtonGroup = styled(Stack)`
+  flex-direction: row;
+  gap: 8px;
+`;
+
+export const EditIconButton = styled(IconButton)`
+  background-color: #f5f5f5;
+  transition: all 0.2s ease;
+
+  &:hover {
+    background-color: #e0e0e0;
+    transform: scale(1.05);
+  }
+`;
+
+export const DeleteIconButton = styled(IconButton)`
+  background-color: #fdecea;
+  transition: all 0.2s ease;
+
+  &:hover {
+    background-color: #f8d7da;
+    transform: scale(1.05);
   }
 `;

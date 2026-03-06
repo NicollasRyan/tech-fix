@@ -5,11 +5,11 @@ import {
   ReactNode,
   useEffect,
 } from "react";
-import { GoogleAuthProvider, unlink, User } from "firebase/auth";
-import { auth, db, googleProvider } from "../firebase.ts";
+import { User } from "firebase/auth";
+import { auth, db } from "../firebase.ts";
 import { onAuthStateChanged } from "firebase/auth";
-import { linkWithPopup } from "firebase/auth";
 import { doc, setDoc, updateDoc, getDoc } from "firebase/firestore";
+import { getGoogleCalendarAccessTokenFromPopup } from "../services/googleTokenPopup.ts";
 
 type AuthContextType = {
   user?: User | null;
@@ -41,24 +41,27 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       throw new Error("Usuário não autenticado.");
     }
 
-    if (googleLoading) return; // evita abrir 2 popups
+    if (googleLoading) return;
 
     try {
       setGoogleLoading(true);
-
-      const result = await linkWithPopup(auth.currentUser, googleProvider);
-
-      const credential = GoogleAuthProvider.credentialFromResult(result);
-
-      const token = credential?.accessToken || null;
+      const token = await getGoogleCalendarAccessTokenFromPopup();
 
       setAccessToken(token);
       setGoogleConnected(true);
+
+      if (token) {
+        localStorage.removeItem("googleAccessToken");
+        localStorage.removeItem("googleTokenCreated");
+        localStorage.setItem("googleAccessToken", token);
+        localStorage.setItem("googleTokenCreated", Date.now().toString());
+      }
 
       await setDoc(
         doc(db, "users", auth.currentUser.uid),
         {
           googleConnected: true,
+          googleConnectedAt: new Date(),
           email: auth.currentUser.email,
         },
         { merge: true },
@@ -66,7 +69,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     } catch (error: any) {
       if (error.code !== "auth/cancelled-popup-request") {
         console.error("Erro ao conectar Google Calendar:", error);
-        setError("Essa conta do Google já está conectada a outro usuário. Tente novamente.");
+        setError(
+          "Não foi possível concluir a conexão com Google Calendar. Tente novamente.",
+        );
       }
     } finally {
       setGoogleLoading(false);
@@ -76,27 +81,65 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const disconnectGoogleCalendar = async () => {
     if (!auth.currentUser) return;
 
-    await unlink(auth.currentUser, "google.com");
-
     await updateDoc(doc(db, "users", auth.currentUser.uid), {
       googleConnected: false,
     });
 
     setAccessToken(null);
     setGoogleConnected(false);
+    localStorage.removeItem("googleAccessToken");
+    localStorage.removeItem("googleTokenCreated");
   };
 
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, async (currentUser) => {
       if (currentUser) {
         setUser(currentUser);
-        setAccessToken(null);
 
-        const userDoc = await getDoc(doc(db, "users", currentUser.uid));
+        const userRef = doc(db, "users", currentUser.uid);
+        const userDoc = await getDoc(userRef);
+
+        const savedToken = localStorage.getItem("googleAccessToken");
+        const tokenCreated = localStorage.getItem("googleTokenCreated");
+
+        if (savedToken && tokenCreated) {
+          const diff = Date.now() - Number(tokenCreated);
+          const oneHour = 1000 * 60 * 60;
+
+          if (diff < oneHour) {
+            setAccessToken(savedToken);
+          } else {
+            localStorage.removeItem("googleAccessToken");
+            localStorage.removeItem("googleTokenCreated");
+            setAccessToken(null);
+          }
+        }
 
         if (userDoc.exists()) {
           const data = userDoc.data();
-          setGoogleConnected(!!data.googleConnected);
+
+          if (data.googleConnected && data.googleConnectedAt) {
+            const connectedAt = data.googleConnectedAt.toDate() ?? new Date();
+            const now = new Date();
+            const diffInDays =
+              (now.getTime() - connectedAt.getTime()) / (1000 * 60 * 60 * 24);
+
+            if (diffInDays > 30) {
+              await updateDoc(userRef, {
+                googleConnected: false,
+                googleConnectedAt: null,
+              });
+
+              setGoogleConnected(false);
+              setAccessToken(null);
+              localStorage.removeItem("googleAccessToken");
+              localStorage.removeItem("googleTokenCreated");
+            } else {
+              setGoogleConnected(true);
+            }
+          } else {
+            setGoogleConnected(false);
+          }
         } else {
           setGoogleConnected(false);
         }
@@ -104,6 +147,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         setUser(null);
         setAccessToken(null);
         setGoogleConnected(false);
+        localStorage.removeItem("googleAccessToken");
+        localStorage.removeItem("googleTokenCreated");
       }
 
       setLoadingAuth(false);

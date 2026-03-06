@@ -9,7 +9,7 @@ export const FormCard = styled(Paper)`
   margin-top: 16px;
 `;
 
-export const Text = styled(Typography)`
+export const Title = styled(Typography)`
   font-size: 26px;
   font-weight: 700;
   color: #1a1a1a;
@@ -20,6 +20,10 @@ export const Text = styled(Typography)`
   display: flex;
   align-items: center;
   gap: 8px;
+
+  @media (max-width: 600px) {
+    font-size: 22px;
+  }
 `;
 
 export const Label = styled(Typography)`

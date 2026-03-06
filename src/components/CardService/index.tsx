@@ -6,15 +6,18 @@ import {
   SERVICE_TYPE_LABELS,
   type ServiceType,
 } from "../../constants/serviceTypes.ts";
+import React from "react";
 
 export const CardService = ({
   serviceType,
   clientName,
   createdAt,
+  city,
 }: {
   serviceType: string;
   clientName: string;
   createdAt: { toDate: () => Date };
+  city?: string;
 }) => {
   const normalizedType = normalizeServiceType(serviceType);
 
@@ -48,7 +51,7 @@ export const CardService = ({
         <BoxTypeService bg={style.bg} border={style.base} color={style.base}>
           <Typography>{label}</Typography>
         </BoxTypeService>
-        <TextClient>{clientName}</TextClient>
+        <TextClient>{city ? `${clientName} - ${city}` : clientName}</TextClient>
         <Typography variant="body2" sx={{ color: "#666", fontSize: "13px" }}>
           Realizado:{" "}
           <span style={{ color: "red" }}>

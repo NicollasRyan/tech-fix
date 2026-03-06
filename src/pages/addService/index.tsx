@@ -28,10 +28,11 @@ import {
   Title,
   BoxHeader,
   FormCard,
+  BoxDate,
 } from "./styles.ts";
 import { PatternFormat, NumericFormat } from "react-number-format";
 import { useAuth } from "../../contexts/AuthContext.tsx";
-import { createCalendarEvent } from "../../services/calendarService.ts";
+import { createEventWithAutoReconnect } from "../../services/createEventWithAutoReconnect.ts";
 import { AdapterDayjs } from "@mui/x-date-pickers/AdapterDayjs";
 import { useNavigate, useParams } from "react-router-dom";
 import { ptBR } from "@mui/x-date-pickers/locales";
@@ -49,41 +50,32 @@ import {
   InputAdornment,
   Chip,
   Box,
+  Alert,
+  AlertTitle,
 } from "@mui/material";
 import { DatePicker } from "@mui/x-date-pickers/DatePicker";
 import { LocalizationProvider } from "@mui/x-date-pickers/LocalizationProvider";
 import "dayjs/locale/pt-br";
 import { Add, ArrowBack } from "@mui/icons-material";
-import dayjs, { Dayjs } from "dayjs";
+import dayjs from "dayjs";
 import React from "react";
+import z from "zod";
 dayjs.locale("pt-br");
 
-type FormValues = {
-  clientName: string;
-  serviceType: string;
-  maintenance?: string;
-  valueService: string;
-  notify: boolean;
-  notificationDate: Dayjs | null;
-  phone?: string;
-  email?: string;
-  cpf?: string;
-  address?: string;
-  equipmentModel?: string;
-  equipmentBrand?: string;
-  usedParts?: string[];
-};
+type FormValues = z.infer<typeof serviceSchema>;
 
 export type ModalAddServiceInitialData = {
   clientName: string;
   serviceType: string;
-  maintenance?: string;
-  valueService: number | string;
+  description?: string;
+  valueService: number | null;
   notificationDate: { toDate: () => Date } | null;
+  descriptionMaintenance: string;
   phone?: string;
   email?: string;
   cpf?: string;
   address?: string;
+  city?: string;
   equipmentModel?: string;
   equipmentBrand?: string;
   usedParts?: string[];
@@ -92,14 +84,16 @@ export type ModalAddServiceInitialData = {
 const defaultValues: FormValues = {
   clientName: "",
   serviceType: "",
-  maintenance: "",
-  valueService: "",
+  description: "",
+  valueService: null,
   notify: false,
   notificationDate: null,
+  descriptionMaintenance: "",
   phone: "",
   email: "",
   cpf: "",
   address: "",
+  city: "",
   equipmentModel: "",
   equipmentBrand: "",
   usedParts: [],
@@ -124,7 +118,7 @@ export const AddService = ({
 
   const servicesRef = collection(db, "services");
   const isEdit = Boolean(paramServiceId);
-  const { accessToken } = useAuth();
+  const { accessToken, googleConnected } = useAuth();
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -143,13 +137,15 @@ export const AddService = ({
           setInitialData({
             clientName: data.clientName,
             serviceType: data.serviceType,
-            maintenance: data.maintenance,
+            description: data.description,
             valueService: data.valueService,
             notificationDate: data.notificationDate,
+            descriptionMaintenance: data.descriptionMaintenance,
             phone: data.phone,
             email: data.email,
             cpf: data.cpf,
             address: data.address,
+            city: data.city,
             equipmentModel: data.equipmentModel,
             equipmentBrand: data.equipmentBrand,
             usedParts: data.usedParts,
@@ -188,17 +184,19 @@ export const AddService = ({
       reset({
         clientName: initialData.clientName,
         serviceType: normalizeServiceType(initialData.serviceType),
-        maintenance: initialData.maintenance,
-        valueService: String(initialData.valueService ?? "").replace(",", "."),
+        description: initialData.description,
+        valueService: Number(initialData.valueService ?? 0),
         notify: hasNotification,
         notificationDate:
           hasNotification && initialData.notificationDate
             ? dayjs(initialData.notificationDate.toDate())
             : null,
-        phone: initialData.phone || "",
+        descriptionMaintenance: initialData.descriptionMaintenance,
+        phone: initialData.phone?.toString() ?? "",
         email: initialData.email || "",
         cpf: initialData.cpf || "",
         address: initialData.address || "",
+        city: initialData.city || "",
         equipmentModel: initialData.equipmentModel || "",
         equipmentBrand: initialData.equipmentBrand || "",
         usedParts: initialData.usedParts || [],
@@ -243,16 +241,13 @@ export const AddService = ({
     }
 
     const normalizedServiceType = normalizeServiceType(data.serviceType);
-    const cleanedValue = String(data.valueService ?? "")
-      .replace(/[^0-9,.-]/g, "")
-      .replace(/\./g, "")
-      .replace(/,/g, ".");
-    const parsedValue = Number.parseFloat(cleanedValue);
+
+    const parsedValue = data.valueService;
     const notificationTimestamp =
       data.notify && data.notificationDate
         ? Timestamp.fromDate(data.notificationDate.toDate())
         : null;
-    if (isNaN(parsedValue) || parsedValue <= 0) {
+    if (!parsedValue || parsedValue <= 0) {
       onError?.("Valor do serviço inválido. Informe um número positivo.");
       return;
     }
@@ -261,13 +256,14 @@ export const AddService = ({
         const updateData: Record<string, any> = {
           clientName: data.clientName,
           serviceType: normalizedServiceType,
-          maintenance: data?.maintenance,
+          description: data?.description,
           valueService: parsedValue,
           notificationDate: notificationTimestamp,
           phone: data?.phone,
           email: data?.email,
           cpf: data?.cpf,
           address: data?.address,
+          city: data?.city,
           equipmentModel: data?.equipmentModel,
           equipmentBrand: data?.equipmentBrand,
           usedParts: data?.usedParts || [],
@@ -279,13 +275,15 @@ export const AddService = ({
         const createData: Record<string, any> = {
           clientName: data.clientName,
           serviceType: normalizedServiceType,
-          maintenance: data?.maintenance,
+          description: data?.description,
           valueService: parsedValue,
           notificationDate: notificationTimestamp,
+          descriptionMaintenance: data.descriptionMaintenance,
           phone: data?.phone,
           email: data?.email,
           cpf: data?.cpf,
           address: data?.address,
+          city: data?.city,
           equipmentModel: data?.equipmentModel,
           equipmentBrand: data?.equipmentBrand,
           usedParts: data?.usedParts || [],
@@ -298,11 +296,12 @@ export const AddService = ({
         await addDoc(servicesRef, createData);
       }
 
-      if (notificationTimestamp && accessToken) {
-        await createCalendarEvent(accessToken, {
+      if (notificationTimestamp && accessToken && googleConnected) {
+        await createEventWithAutoReconnect(accessToken, {
           clientName: data.clientName,
           serviceType: data.serviceType,
           notificationDate: notificationTimestamp.toDate(),
+          description: data.descriptionMaintenance,
         });
       }
 
@@ -342,256 +341,275 @@ export const AddService = ({
         {isEdit && loading && <p>Carregando dados do serviço...</p>}
         {!loading && (
           <FormCard elevation={0} sx={{ mt: 2 }}>
-          <form onSubmit={handleSubmit(onSubmit)}>
-            <Grid container spacing={2} marginBottom={2}>
-              <Grid size={12}>
-                <BoxLine>
-                  <Text>Dados do Cliente</Text>
-                </BoxLine>
-              </Grid>
-              <Grid size={6}>
-                <Label>Nome do cliente</Label>
-                <TextField
-                  {...register("clientName")}
-                  error={!!errors.clientName}
-                  helperText={errors.clientName?.message}
-                  fullWidth
-                />
-              </Grid>
+            <form onSubmit={handleSubmit(onSubmit)}>
+              <Grid container spacing={2} marginBottom={2}>
+                <Grid size={12}>
+                  <BoxLine>
+                    <Text>Dados do Cliente</Text>
+                  </BoxLine>
+                </Grid>
+                <Grid size={{ xs: 12, md: 6 }}>
+                  <Label>Nome do cliente</Label>
+                  <TextField
+                    {...register("clientName")}
+                    error={!!errors.clientName}
+                    helperText={errors.clientName?.message}
+                    fullWidth
+                  />
+                </Grid>
 
-              <Grid size={6}>
-                <Label>Telefone (Opcional)</Label>
-                <Controller
-                  name="phone"
-                  control={control}
-                  render={({ field }) => (
-                    <PatternFormat
-                      {...field}
-                      customInput={TextField}
-                      format="(##) #####-####"
-                      mask="_"
-                      fullWidth
-                      placeholder="(XX) XXXXX-XXXX"
-                      error={!!errors.phone}
-                      helperText={errors.phone?.message}
-                      onValueChange={(values) => {
-                        field.onChange(values.value);
-                      }}
-                    />
-                  )}
-                />
-              </Grid>
-              <Grid size={6}>
-                <Label>Email (Opcional)</Label>
-                <TextField
-                  type="email"
-                  {...register("email")}
-                  error={!!errors.email}
-                  helperText={errors.email?.message}
-                  fullWidth
-                />
-              </Grid>
-              <Grid size={6}>
-                <Label>CPF (Opcional)</Label>
-                <Controller
-                  name="cpf"
-                  control={control}
-                  render={({ field }) => (
-                    <PatternFormat
-                      {...field}
-                      customInput={TextField}
-                      format="###.###.###-##"
-                      mask="_"
-                      fullWidth
-                      placeholder="XXX.XXX.XXX-XX"
-                      error={!!errors.cpf}
-                      helperText={errors.cpf?.message}
-                      onValueChange={(values) => {
-                        field.onChange(values.value);
-                      }}
-                    />
-                  )}
-                />
-              </Grid>
-              <Grid size={12}>
-                <Label>Endereço (Opcional)</Label>
-                <TextField
-                  {...register("address")}
-                  error={!!errors.address}
-                  helperText={errors.address?.message}
-                  fullWidth
-                />
-              </Grid>
-              <Grid size={12}>
-                <BoxLine>
-                  <Text>Dados do Servico</Text>
-                </BoxLine>
-              </Grid>
-              <Grid size={6}>
-                <Label>Tipo de Serviço</Label>
-                <Controller
-                  name="serviceType"
-                  control={control}
-                  render={({ field }) => (
-                    <>
-                      <Select
+                <Grid size={{ xs: 12, md: 6 }}>
+                  <Label>Telefone (Opcional)</Label>
+                  <Controller
+                    name="phone"
+                    control={control}
+                    render={({ field }) => (
+                      <PatternFormat
                         {...field}
-                        error={!!errors.serviceType}
+                        customInput={TextField}
+                        format="(##) #####-####"
+                        mask="_"
                         fullWidth
-                        displayEmpty
-                      >
-                        <MenuItem value="">Selecione</MenuItem>
-                        {SERVICE_TYPES.map((serviceType) => (
-                          <MenuItem key={serviceType} value={serviceType}>
-                            {SERVICE_TYPE_LABELS[serviceType]}
-                          </MenuItem>
-                        ))}
-                      </Select>
-                      {errors.serviceType && (
-                        <FormHelperText error>
-                          {errors.serviceType.message}
-                        </FormHelperText>
-                      )}
-                    </>
-                  )}
-                />
-              </Grid>
-              <Grid size={6}>
-                <Label>Valor do Serviço</Label>
-                <Controller
-                  name="valueService"
-                  control={control}
-                  render={({ field }) => (
-                    <NumericFormat
-                      {...field}
-                      customInput={TextField}
-                      fullWidth
-                      thousandSeparator="."
-                      decimalSeparator=","
-                      prefix="R$ "
-                      decimalScale={2}
-                      fixedDecimalScale
-                      allowNegative={false}
-                      error={!!errors.valueService}
-                      helperText={errors.valueService?.message}
-                      onValueChange={(values) => {
-                        field.onChange(values.value);
-                      }}
-                    />
-                  )}
-                />
-              </Grid>
-              <Grid size={12}>
-                <Label>Manutenção do Serviço (Opcional)</Label>
-                <TextField
-                  {...register("maintenance")}
-                  error={!!errors.maintenance}
-                  helperText={errors.maintenance?.message}
-                  fullWidth
-                />
-              </Grid>
-              <Grid size={6}>
-                <Label>Modelo do Equipamento (Opcional)</Label>
-                <TextField
-                  {...register("equipmentModel")}
-                  error={!!errors.equipmentModel}
-                  helperText={errors.equipmentModel?.message}
-                  fullWidth
-                />
-              </Grid>
-              <Grid size={6}>
-                <Label>Marca (Opcional)</Label>
-                <TextField
-                  {...register("equipmentBrand")}
-                  error={!!errors.equipmentBrand}
-                  helperText={errors.equipmentBrand?.message}
-                  fullWidth
-                />
-              </Grid>
-              <Grid size={12}>
-                <Label>Peças Utilizadas (Opcional)</Label>
-
-                <TextField
-                  value={pieceInput}
-                  onChange={(e) => setPieceInput(e.target.value)}
-                  fullWidth
-                  placeholder="Digite a peça e clique em adicionar"
-                  slotProps={{
-                    input: {
-                      endAdornment: (
-                        <InputAdornment position="end">
-                          <ButtonSubmit onClick={handleAddPiece}>
-                            <Add />
-                          </ButtonSubmit>
-                        </InputAdornment>
-                      ),
-                    },
-                  }}
-                />
-                <Box sx={{ mt: 2, display: "flex", gap: 1, flexWrap: "wrap" }}>
-                  {usedParts?.map((piece, index) => (
-                    <Chip
-                      key={index}
-                      label={piece}
-                      onDelete={() => handleRemovePiece(index)}
-                    />
-                  ))}
-                </Box>
-              </Grid>
-              <Grid size={12}>
-                <Controller
-                  name="notify"
-                  control={control}
-                  render={({ field }) => (
-                    <FormControlLabel
-                      control={
-                        <Checkbox
-                          checked={!!field.value}
-                          onChange={(_, checked) => field.onChange(checked)}
-                        />
-                      }
-                      label="Notificar"
-                    />
-                  )}
-                />
-                {notify && (
-                 <Box>
-                   <Controller
-                    name="notificationDate"
+                        placeholder="(XX) XXXXX-XXXX"
+                        error={!!errors.phone}
+                        helperText={errors.phone?.message}
+                        onValueChange={(values) => {
+                          field.onChange(values.value);
+                        }}
+                      />
+                    )}
+                  />
+                </Grid>
+                <Grid size={{ xs: 12, md: 6 }}>
+                  <Label>Email (Opcional)</Label>
+                  <TextField
+                    type="email"
+                    {...register("email")}
+                    error={!!errors.email}
+                    helperText={errors.email?.message}
+                    fullWidth
+                  />
+                </Grid>
+                <Grid size={{ xs: 12, md: 6 }}>
+                  <Label>CPF (Opcional)</Label>
+                  <Controller
+                    name="cpf"
+                    control={control}
+                    render={({ field }) => (
+                      <PatternFormat
+                        {...field}
+                        customInput={TextField}
+                        format="###.###.###-##"
+                        mask="_"
+                        fullWidth
+                        placeholder="XXX.XXX.XXX-XX"
+                        error={!!errors.cpf}
+                        helperText={errors.cpf?.message}
+                        onValueChange={(values) => {
+                          field.onChange(values.value);
+                        }}
+                      />
+                    )}
+                  />
+                </Grid>
+                <Grid size={{ xs: 12, md: 6 }}>
+                  <Label>Cidade (Opcional)</Label>
+                  <TextField
+                    {...register("city")}
+                    error={!!errors.city}
+                    helperText={errors.city?.message}
+                    fullWidth
+                  />
+                </Grid>
+                <Grid size={{ xs: 12, md: 6 }}>
+                  <Label>Endereço (Opcional)</Label>
+                  <TextField
+                    {...register("address")}
+                    error={!!errors.address}
+                    helperText={errors.address?.message}
+                    fullWidth
+                  />
+                </Grid>
+                <Grid size={12}>
+                  <BoxLine>
+                    <Text>Dados do Servico</Text>
+                  </BoxLine>
+                </Grid>
+                <Grid size={{ xs: 12, md: 6 }}>
+                  <Label>Tipo de Serviço</Label>
+                  <Controller
+                    name="serviceType"
                     control={control}
                     render={({ field }) => (
                       <>
-                        <Label>Data de Notificacao:</Label>
-                        <DatePicker
-                          value={field.value || dayjs()}
-                          onChange={(date) => field.onChange(date)}
-                          minDate={dayjs()}
-                          format="DD/MM/YYYY"
-                          slotProps={{ textField: { fullWidth: true } }}
-                        />
-                        {errors.notificationDate && (
+                        <Select
+                          {...field}
+                          error={!!errors.serviceType}
+                          fullWidth
+                          displayEmpty
+                        >
+                          <MenuItem value="">Selecione</MenuItem>
+                          {SERVICE_TYPES.map((serviceType) => (
+                            <MenuItem key={serviceType} value={serviceType}>
+                              {SERVICE_TYPE_LABELS[serviceType]}
+                            </MenuItem>
+                          ))}
+                        </Select>
+                        {errors.serviceType && (
                           <FormHelperText error>
-                            {errors.notificationDate.message}
+                            {errors.serviceType.message}
                           </FormHelperText>
                         )}
                       </>
                     )}
                   />
-                  
-                 </Box>
-                )}
-              </Grid>
-            </Grid>
+                </Grid>
+                <Grid size={{ xs: 12, md: 6 }}>
+                  <Label>Valor do Serviço</Label>
+                  <Controller
+                    name="valueService"
+                    control={control}
+                    render={({ field }) => (
+                      <NumericFormat
+                        value={field.value ?? ""}
+                        customInput={TextField}
+                        fullWidth
+                        thousandSeparator="."
+                        decimalSeparator=","
+                        prefix="R$ "
+                        decimalScale={2}
+                        fixedDecimalScale
+                        allowNegative={false}
+                        error={!!errors.valueService}
+                        helperText={errors.valueService?.message}
+                        onValueChange={(values) => {
+                          field.onChange(values.floatValue ?? null);
+                        }}
+                      />
+                    )}
+                  />
+                </Grid>
+                <Grid size={12}>
+                  <Label>Descrição do Serviço (Opcional)</Label>
+                  <TextField
+                    {...register("description")}
+                    error={!!errors.description}
+                    helperText={errors.description?.message}
+                    fullWidth
+                  />
+                </Grid>
+                <Grid size={{ xs: 12, md: 6 }}>
+                  <Label>Modelo do Equipamento (Opcional)</Label>
+                  <TextField
+                    {...register("equipmentModel")}
+                    error={!!errors.equipmentModel}
+                    helperText={errors.equipmentModel?.message}
+                    fullWidth
+                  />
+                </Grid>
+                <Grid size={{ xs: 12, md: 6 }}>
+                  <Label>Marca (Opcional)</Label>
+                  <TextField
+                    {...register("equipmentBrand")}
+                    error={!!errors.equipmentBrand}
+                    helperText={errors.equipmentBrand?.message}
+                    fullWidth
+                  />
+                </Grid>
+                <Grid size={12}>
+                  <Label>Peças Utilizadas (Opcional)</Label>
 
-            <BoxButtons>
-              <ButtonCancel onClick={() => navigate("/")}>
-                Cancelar
-              </ButtonCancel>
-              <ButtonSubmit type="submit">
-                {isSubmitting ? "Salvando..." : isEdit ? "Salvar" : "Adicionar"}
-              </ButtonSubmit>
-            </BoxButtons>
-          </form>
+                  <TextField
+                    value={pieceInput}
+                    onChange={(e) => setPieceInput(e.target.value)}
+                    fullWidth
+                    slotProps={{
+                      input: {
+                        endAdornment: (
+                          <InputAdornment position="end">
+                            <ButtonSubmit onClick={handleAddPiece}>
+                              <Add />
+                            </ButtonSubmit>
+                          </InputAdornment>
+                        ),
+                      },
+                    }}
+                  />
+                  <Box sx={{ mt: 2, display: "flex", gap: 1, flexWrap: "wrap" }}>
+                    {usedParts?.map((piece, index) => (
+                      <Chip
+                        key={index}
+                        label={piece}
+                        onDelete={() => handleRemovePiece(index)}
+                      />
+                    ))}
+                  </Box>
+                </Grid>
+                <Grid size={12}>
+                  <Controller
+                    name="notify"
+                    control={control}
+                    render={({ field }) => (
+                      <FormControlLabel
+                        control={
+                          <Checkbox
+                            checked={!!field.value}
+                            onChange={(_, checked) => field.onChange(checked)}
+                          />
+                        }
+                        label="Notificar"
+                      />
+                    )}
+                  />
+                  {notify && (
+                    <>
+                      {googleConnected ? (
+                        <BoxDate>
+                          <Controller
+                            name="notificationDate"
+                            control={control}
+                            render={({ field }) => (
+                              <>
+                                <Label>Data de Notificação:</Label>
+
+                                <DatePicker
+                                  value={field.value || dayjs()}
+                                  onChange={(date) => field.onChange(date)}
+                                  minDate={dayjs()}
+                                  format="DD/MM/YYYY"
+                                  slotProps={{
+                                    textField: {
+                                      fullWidth: true,
+                                    },
+                                  }}
+                                />
+                              </>
+                            )}
+                          />
+                          <Label>Proxima Manutenção</Label>
+                          <TextField fullWidth {...register("descriptionMaintenance")} />
+                        </BoxDate>
+                      ) : (
+                        <Alert severity="warning" sx={{ mb: 2 }}>
+                          <AlertTitle>Google Calendar não conectado</AlertTitle>
+                          Para usar notificações automáticas, conecte sua conta do Google
+                          nas configurações do perfil.
+                        </Alert>
+                      )}
+                    </>
+                  )}
+                </Grid>
+              </Grid>
+
+              <BoxButtons>
+                <ButtonCancel onClick={() => navigate("/")}>
+                  Cancelar
+                </ButtonCancel>
+                <ButtonSubmit type="submit">
+                  {isSubmitting ? "Salvando..." : isEdit ? "Salvar" : "Adicionar"}
+                </ButtonSubmit>
+              </BoxButtons>
+            </form>
           </FormCard>
         )}
       </Container>

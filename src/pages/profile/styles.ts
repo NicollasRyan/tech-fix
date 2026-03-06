@@ -1,5 +1,5 @@
 import styled from "@emotion/styled";
-import { Box, Button, Card, Typography, Container } from "@mui/material";
+import { Box, Button, Card, Typography, Container, IconButton } from "@mui/material";
 
 export const ContainerProfile = styled(Container)`
   margin-bottom: 40px;
@@ -18,10 +18,39 @@ export const Header = styled(Box)`
 `;
 
 export const Title = styled(Typography)`
-  font-size: 28px;
+  font-size: 26px;
   font-weight: 700;
   color: #1a1a1a;
   letter-spacing: -0.02em;
+
+  @media (max-width: 600px) {
+    font-size: 22px;
+  }
+`;
+
+export const LogoutIconButton = styled(IconButton)`
+  background-color: rgba(211, 47, 47, 0.06);
+  color: #d32f2f;
+  border-radius: 12px;
+  padding: 8px;
+  transition: all 0.2s ease;
+  border: 1px solid rgba(211, 47, 47, 0.25);
+
+  &:hover {
+    background-color: rgba(211, 47, 47, 0.12);
+    border-color: #d32f2f;
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(211, 47, 47, 0.2);
+  }
+
+  &:active {
+    transform: translateY(0);
+    box-shadow: none;
+  }
+
+  svg {
+    font-size: 20px;
+  }
 `;
 
 export const UserInfoCard = styled(Card)`
@@ -96,31 +125,51 @@ export const StatLabel = styled(Typography)`
 `;
 
 export const ButtonLogout = styled(Button)`
-  background-color: #f5f5f5;
-  color: #424242;
+  background-color: rgba(211, 47, 47, 0.08);
+  color: #d32f2f;
   text-transform: none;
-  padding: 10px 24px;
-  border-radius: 10px;
+  padding: 10px 22px;
+  border-radius: 12px;
   font-weight: 600;
+  transition: all 0.2s ease;
 
   &:hover {
-    background-color: #ffebee;
-    color: #c62828;
+    background-color: rgba(211, 47, 47, 0.18);
+    transform: translateY(-2px);
+  }
+
+  &:active {
+    transform: translateY(0);
+  }
+
+  @media (max-width: 600px) {
+    font-size: 12px;
+    padding: 8px 16px;
   }
 `;
 
 export const ButtonEdit = styled(Button)`
-  background-color: #0d47a1;
+  background: linear-gradient(135deg, #1565c0, #0d47a1);
   color: #fff;
   text-transform: none;
   padding: 10px 24px;
-  border-radius: 10px;
+  border-radius: 12px;
   font-weight: 600;
-  box-shadow: 0 2px 8px rgba(13, 71, 161, 0.25);
+  box-shadow: 0 4px 14px rgba(13, 71, 161, 0.25);
+  transition: all 0.2s ease;
 
   &:hover {
-    background-color: #1565c0;
-    box-shadow: 0 4px 12px rgba(13, 71, 161, 0.35);
+    box-shadow: 0 6px 18px rgba(13, 71, 161, 0.35);
+    transform: translateY(-2px);
+  }
+
+  &:active {
+    transform: translateY(0);
+  }
+
+  @media (max-width: 600px) {
+    font-size: 12px;
+    padding: 8px 18px;
   }
 `;
 

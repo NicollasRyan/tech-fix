@@ -27,10 +27,13 @@ import {
   ActionButtons,
   ContainerProfile,
   ButtonEdit,
+  LogoutIconButton,
 } from "./styles.ts";
-import { Box, Button, CircularProgress, Container, IconButton } from "@mui/material";
+import { Box, Button, CircularProgress, Container, IconButton, useTheme, useMediaQuery } from "@mui/material";
 import { ModalLogout } from "../../components/ModalLogout/index.tsx";
 import ArrowBackIcon from "@mui/icons-material/ArrowBack";
+import { Logout, Login } from "@mui/icons-material";
+import React from "react";
 
 function Profile() {
   const navigate = useNavigate();
@@ -40,12 +43,14 @@ function Profile() {
     googleConnected,
     connectGoogleCalendar,
     disconnectGoogleCalendar,
-    googleLoading,
   } = useAuth();
   const [services, setServices] = useState<ServiceDoc[]>([]);
   const [showLogoutModal, setShowLogoutModal] = useState(false);
   const [loadingServices, setLoadingServices] = useState(true);
   const [userPhone, setUserPhone] = useState<string>("");
+
+  const theme = useTheme();
+  const isMobile = useMediaQuery(theme.breakpoints.down("sm"));
 
   useEffect(() => {
     if (!authLoading && !user) {
@@ -54,7 +59,6 @@ function Profile() {
     }
 
     if (user) {
-      // Buscar dados customizados do usuário (telefone)
       const fetchUserData = async () => {
         try {
           const userDoc = await getDoc(doc(db, "users", user.uid));
@@ -68,7 +72,6 @@ function Profile() {
 
       fetchUserData();
 
-      // Buscar serviços do usuário
       const q = query(
         collection(db, "services"),
         where("userId", "==", user.uid),
@@ -97,15 +100,24 @@ function Profile() {
   };
 
   const totalServices = services.length;
-  const totalValue = services.reduce((sum, service) => {
-    return sum + Number(service.valueService || 0);
+  const totalValue = services.reduce((total, service) => {
+    if (!service) return total;
+
+    const serviceValue = Number(service.valueService ?? 0);
+
+    const maintenanceValue = Array.isArray(service.manutencoes)
+      ? service.manutencoes.reduce(
+        (sum, m) => sum + Number(m?.valueService ?? 0),
+        0
+      )
+      : 0;
+
+    return total + serviceValue + maintenanceValue;
   }, 0);
 
-  const totalMaintenances = services.reduce((sum, service) => {
-    return (
-      sum +
-      (Array.isArray(service.manutencoes) ? service.manutencoes.length : 0)
-    );
+  const totalMaintenances = services.reduce((total, service) => {
+    const maintenanceCount = (service.manutencoes || []).length;
+    return total + maintenanceCount;
   }, 0);
 
   const servicesWithNotification = services.filter(
@@ -180,8 +192,28 @@ function Profile() {
             >
               {googleConnected ? "● Conectada" : "● Não conectada"}
             </InfoValue>
-
-            {googleConnected ? (
+            {isMobile ? (
+              googleConnected ? (
+                <LogoutIconButton onClick={disconnectGoogleCalendar} size="small">
+                  <Logout />
+                </LogoutIconButton>
+              ) : (
+                <IconButton
+                  onClick={connectGoogleCalendar}
+                  size="small"
+                  sx={{
+                    borderRadius: 2,
+                    border: "1px solid #2e7d32",
+                    color: "#2e7d32",
+                    "&:hover": {
+                      backgroundColor: "rgba(46, 125, 34, 0.08)",
+                    },
+                  }}
+                >
+                  <Login />
+                </IconButton>
+              )
+            ) : googleConnected ? (
               <Button
                 onClick={disconnectGoogleCalendar}
                 variant="outlined"
@@ -203,24 +235,24 @@ function Profile() {
             ) : (
               <Button
                 onClick={connectGoogleCalendar}
-                variant="contained"
+                variant="outlined"
                 size="small"
-                disabled={googleLoading}
                 sx={{
                   borderRadius: 2,
-                  backgroundColor: "#4285F4",
+                  borderColor: "#2e7d32",
+                  color: "#2e7d32",
                   fontWeight: 600,
                   textTransform: "none",
-                  boxShadow: "0 2px 8px rgba(66, 133, 244, 0.35)",
                   "&:hover": {
-                    backgroundColor: "#3367D6",
-                    boxShadow: "0 4px 12px rgba(66, 133, 244, 0.4)",
+                    borderColor: "#1b5e20",
+                    backgroundColor: "rgba(46, 125, 34, 0.04)",
                   },
                 }}
               >
-                {googleLoading ? "Conectando..." : "Conectar Google"}
+                Conectar
               </Button>
             )}
+
           </Box>
         </InfoRow>
 
@@ -245,7 +277,12 @@ function Profile() {
         </StatCard>
 
         <StatCard>
-          <StatValue>R$ {totalValue.toFixed(2)}</StatValue>
+          <StatValue>{totalValue.toLocaleString("pt-BR", {
+            style: "currency",
+            currency: "BRL",
+            minimumFractionDigits: 2,
+            maximumFractionDigits: 2,
+          })}</StatValue>
           <StatLabel>Valor Total</StatLabel>
         </StatCard>
 

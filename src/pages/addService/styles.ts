@@ -13,6 +13,10 @@ export const Title = styled(Typography)`
   font-weight: 700;
   color: #1a1a1a;
   letter-spacing: -0.02em;
+
+  @media (max-width: 600px) {
+    font-size: 22px;
+  }
 `;
 
 export const Text = styled(Typography)`
@@ -80,5 +84,14 @@ export const Label = styled(Typography)`
   font-weight: 600;
   margin-bottom: 8px;
   color: #424242;
-  display: block;
+`;
+
+export const BoxDate = styled(Box)`
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+
+  p {
+    margin: 0;
+  }
 `;

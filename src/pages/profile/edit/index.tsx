@@ -24,6 +24,7 @@ import {
 import { Box, CircularProgress, Alert } from "@mui/material";
 import ArrowBackIcon from "@mui/icons-material/ArrowBack";
 import { IconButton } from "@mui/material";
+import React from "react";
 
 function ProfileEdit() {
   const navigate = useNavigate();
@@ -341,7 +342,7 @@ function ProfileEdit() {
               Cancelar
             </ButtonCancel>
             <ButtonSave type="submit" disabled={loading}>
-              {loading ? "Salvando..." : "Salvar Alterações"}
+              {loading ? "Salvando..." : "Salvar"}
             </ButtonSave>
           </FormActions>
         </form>

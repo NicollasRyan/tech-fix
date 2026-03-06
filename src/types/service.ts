@@ -24,6 +24,7 @@ export type ServiceDoc = {
   email?: string;
   cpf?: string;
   address?: string;
+  city?: string;
   equipmentModel?: string;
   equipmentBrand?: string;
   usedParts?: string[];

@@ -1,6 +1,4 @@
 import {
-  Checkbox,
-  FormControlLabel,
   TextField,
   Container,
   Grid,
@@ -27,21 +25,22 @@ import {
   ButtonSubmit,
   FormCard,
   Label,
-  Text,
+  Title,
 } from "./styles.ts";
 import { maintenanceSchema } from "./maintenanceSchema.ts";
 import { Controller, useForm } from "react-hook-form";
-import { DatePicker } from "@mui/x-date-pickers/DatePicker";
-import dayjs from "dayjs";
 import { useNavigate, useParams, useSearchParams } from "react-router-dom";
 import { NumericFormat } from "react-number-format";
 import { Add, ArrowBack } from "@mui/icons-material";
 import React from "react";
+import z from "zod";
+
+type MaintenanceFormValues = z.infer<typeof maintenanceSchema>;
 
 type Maintenance = {
   id: string;
   title: string;
-  valueService: number | string;
+  valueService: number;
   description?: string;
   usedParts?: string[];
   createdAt: Timestamp;
@@ -50,7 +49,7 @@ type Maintenance = {
 const defaultValues = {
   title: "",
   description: "",
-  valueService: "",
+  valueService: 0,
   notify: false,
   usedParts: [],
   notificationDate: null,
@@ -81,18 +80,10 @@ export const AddMaintenance = () => {
     watch,
     setValue,
     formState: { errors },
-  } = useForm<{
-    title: string;
-    description?: string;
-    valueService: string;
-    notify?: boolean;
-    usedParts?: string[];
-    notificationDate?: any;
-  }>({
+  } = useForm<MaintenanceFormValues>({
     resolver: zodResolver(maintenanceSchema),
     defaultValues,
   });
-  const notify = watch("notify");
   const usedParts = watch("usedParts") ?? [];
   const [pieceInput, setPieceInput] = useState("");
 
@@ -134,7 +125,7 @@ export const AddMaintenance = () => {
       reset({
         title: maintenanceToEdit.title,
         description: maintenanceToEdit.description || "",
-        valueService: String(maintenanceToEdit.valueService ?? ""),
+        valueService: Number(maintenanceToEdit.valueService ?? 0),
         usedParts: maintenanceToEdit.usedParts || [],
         notify: false,
         notificationDate: null,
@@ -161,12 +152,7 @@ export const AddMaintenance = () => {
     if (!serviceId) return;
 
     try {
-      // Converter valueService para número (mesmo padrão do addService)
-      const cleanedValue = String(data.valueService ?? "")
-        .replace(/[^0-9,.-]/g, "")
-        .replace(/\./g, "")
-        .replace(/,/g, ".");
-      const parsedValue = Number.parseFloat(cleanedValue);
+      const parsedValue = data.valueService;
 
       if (isNaN(parsedValue) || parsedValue <= 0) {
         alert("Valor do serviço inválido");
@@ -178,12 +164,12 @@ export const AddMaintenance = () => {
         const updated = allMaintenances.map((m: any) =>
           m.id === maintenanceToEdit.id
             ? {
-                ...m,
-                title: data.title,
-                description: data?.description,
-                valueService: parsedValue || 0,
-                usedParts: data?.usedParts || [],
-              }
+              ...m,
+              title: data.title,
+              description: data?.description,
+              valueService: parsedValue || 0,
+              usedParts: data?.usedParts || [],
+            }
             : m,
         );
 
@@ -216,111 +202,106 @@ export const AddMaintenance = () => {
   return (
     <LocalizationProvider dateAdapter={AdapterDayjs} adapterLocale={"pt-BR"}>
       <Container maxWidth="md">
-        <Text>
+        <Title>
           <IconButton onClick={() => navigate("/serviceDetails/" + serviceId)} sx={{ mr: 0.5 }}>
             <ArrowBack />
           </IconButton>
           {maintenanceToEdit
             ? "Editar manutenção"
             : "Adicionar nova manutenção"}
-        </Text>
+        </Title>
         {loading && <p>Carregando dados da manutenção...</p>}
         {!loading && (
           <FormCard elevation={0}>
-          <form onSubmit={handleSubmit(handleAddMaintenance)}>
-            <Grid container spacing={2}>
-              <Grid size={6}>
-                <Label>Título</Label>
-                <TextField
-                  {...register("title", { required: "Título é obrigatório" })}
-                  variant="outlined"
-                  fullWidth
-                  error={!!errors.title}
-                  helperText={errors.title?.message}
-                />
-              </Grid>
-              <Grid size={6}>
-                <Label>Valor do Serviço</Label>
-                <Controller
-                  name="valueService"
-                  control={control}
-                  render={({ field }) => (
-                    <NumericFormat
-                      {...field}
-                      customInput={TextField}
-                      fullWidth
-                      thousandSeparator="."
-                      decimalSeparator=","
-                      prefix="R$ "
-                      decimalScale={2}
-                      fixedDecimalScale
-                      allowNegative={false}
-                      error={!!errors.valueService}
-                      helperText={errors.valueService?.message}
-                      onValueChange={(values) => {
-                        field.onChange(values.value);
-                      }}
-                    />
-                  )}
-                />
-              </Grid>
-              <Grid size={12}>
-                <Label>Descrição da manutenção</Label>
-                <TextField
-                  {...register("description", {
-                    required: "Descrição é obrigatória",
-                  })}
-                  variant="outlined"
-                  fullWidth
-                  multiline
-                  rows={3}
-                  error={!!errors.description}
-                  helperText={errors.description?.message}
-                />
-              </Grid>
-              <Grid size={12}>
-                <Label>Peças Utilizadas (Opcional)</Label>
+            <form onSubmit={handleSubmit(handleAddMaintenance)}>
+              <Grid container spacing={2}>
+                <Grid size={{ xs: 12, md: 6 }}>
+                  <Label>Título</Label>
+                  <TextField
+                    {...register("title", { required: "Título é obrigatório" })}
+                    variant="outlined"
+                    fullWidth
+                    error={!!errors.title}
+                    helperText={errors.title?.message}
+                  />
+                </Grid>
+                <Grid size={{ xs: 12, md: 6 }}>
+                  <Label>Valor do Serviço</Label>
+                  <Controller
+                    name="valueService"
+                    control={control}
+                    render={({ field }) => (
+                      <NumericFormat
+                        {...field}
+                        customInput={TextField}
+                        fullWidth
+                        thousandSeparator="."
+                        decimalSeparator=","
+                        prefix="R$ "
+                        decimalScale={2}
+                        fixedDecimalScale
+                        allowNegative={false}
+                        error={!!errors.valueService}
+                        helperText={errors.valueService?.message}
+                        onValueChange={(values) => {
+                          field.onChange(values.floatValue ?? 0);
+                        }}
+                      />
+                    )}
+                  />
+                </Grid>
+                <Grid size={{ xs: 12 }}>
+                  <Label>Descrição da manutenção (Opcional)</Label>
+                  <TextField
+                    {...register("description")}
+                    variant="outlined"
+                    fullWidth
+                    multiline
+                    rows={3}
+                  />
+                </Grid>
+                <Grid size={{ xs: 12 }}>
+                  <Label>Peças Utilizadas (Opcional)</Label>
 
-                <TextField
-                  value={pieceInput}
-                  onChange={(e) => setPieceInput(e.target.value)}
-                  fullWidth
-                  placeholder="Digite a peça e clique em adicionar"
-                  slotProps={{
-                    input: {
-                      endAdornment: (
-                        <InputAdornment position="end">
-                          <ButtonSubmit onClick={handleAddPiece}>
-                            <Add />
-                          </ButtonSubmit>
-                        </InputAdornment>
-                      ),
-                    },
-                  }}
-                />
-                <Box sx={{ mt: 2, display: "flex", gap: 1, flexWrap: "wrap" }}>
-                  {usedParts?.map((piece, index) => (
-                    <Chip
-                      key={index}
-                      label={piece}
-                      onDelete={() => handleRemovePiece(index)}
-                    />
-                  ))}
-                </Box>
+                  <TextField
+                    value={pieceInput}
+                    onChange={(e) => setPieceInput(e.target.value)}
+                    fullWidth
+                    slotProps={{
+                      input: {
+                        endAdornment: (
+                          <InputAdornment position="end">
+                            <ButtonSubmit onClick={handleAddPiece}>
+                              <Add />
+                            </ButtonSubmit>
+                          </InputAdornment>
+                        ),
+                      },
+                    }}
+                  />
+                  <Box sx={{ mt: 2, display: "flex", gap: 1, flexWrap: "wrap" }}>
+                    {usedParts?.map((piece, index) => (
+                      <Chip
+                        key={index}
+                        label={piece}
+                        onDelete={() => handleRemovePiece(index)}
+                      />
+                    ))}
+                  </Box>
+                </Grid>
               </Grid>
-            </Grid>
 
-            <BoxButtons>
-              <ButtonCancel
-                onClick={() => navigate("/serviceDetails/" + serviceId)}
-              >
-                Cancelar
-              </ButtonCancel>
-              <ButtonSubmit type="submit">
-                {maintenanceToEdit ? "Salvar alterações" : "Adicionar"}
-              </ButtonSubmit>
-            </BoxButtons>
-          </form>
+              <BoxButtons>
+                <ButtonCancel
+                  onClick={() => navigate("/serviceDetails/" + serviceId)}
+                >
+                  Cancelar
+                </ButtonCancel>
+                <ButtonSubmit type="submit">
+                  {maintenanceToEdit ? "Salvar alterações" : "Adicionar"}
+                </ButtonSubmit>
+              </BoxButtons>
+            </form>
           </FormCard>
         )}
       </Container>

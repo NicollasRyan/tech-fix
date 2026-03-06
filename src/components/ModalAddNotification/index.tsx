@@ -1,4 +1,4 @@
-import { Modal } from "@mui/material";
+import { Modal, TextField } from "@mui/material";
 import { DatePicker } from "@mui/x-date-pickers/DatePicker";
 import { LocalizationProvider } from "@mui/x-date-pickers/LocalizationProvider";
 import { AdapterDayjs } from "@mui/x-date-pickers/AdapterDayjs";
@@ -12,10 +12,12 @@ import {
   ButtonCancel,
   ButtonSubmit,
   Container,
+  Label,
   TextModal,
 } from "./styles.ts";
-import { createCalendarEvent } from "../../services/calendarService.ts";
+import { createEventWithAutoReconnect } from "../../services/createEventWithAutoReconnect.ts";
 import { useAuth } from "../../contexts/AuthContext.tsx";
+import React from "react";
 
 type Props = {
   showModal: boolean;
@@ -35,21 +37,24 @@ export const ModalAddNotification = ({
   serviceType = "Servico",
 }: Props) => {
   const [date, setDate] = useState<Dayjs | null>(null);
-  const { accessToken } = useAuth();
+  const [description, setDescription] = useState<string>("");
+  const { accessToken, googleConnected } = useAuth();
 
   const handleSave = async () => {
     if (!date) return;
 
     await updateDoc(doc(db, "services", serviceId), {
       notificationDate: Timestamp.fromDate(date.toDate()),
+      descriptionMaintenance: description,
       updatedAt: Timestamp.now(),
     });
 
-    if (accessToken) {
-      await createCalendarEvent(accessToken, {
+    if (accessToken && googleConnected) {
+      await createEventWithAutoReconnect(accessToken, {
         clientName,
         serviceType,
         notificationDate: date.toDate(),
+        description,
       });
     }
 
@@ -86,6 +91,13 @@ export const ModalAddNotification = ({
             onChange={(newValue) => setDate(newValue)}
             minDate={dayjs()}
             slotProps={{ textField: { fullWidth: true } }}
+          />
+
+          <Label>Proxima Manutenção</Label>
+          <TextField
+            value={description}
+            fullWidth
+            onChange={(e) => setDescription(e.target.value)}
           />
 
           <BoxButtons>

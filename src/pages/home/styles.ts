@@ -6,6 +6,11 @@ export const BoxNav = styled(Box)`
   display: flex;
   justify-content: space-between;
   margin-bottom: 64px;
+
+  @media (max-width: 768px) {
+    flex-direction: column;
+    gap: 16px;
+  }
 `;
 
 export const BoxSelect = styled(Box)`
@@ -50,6 +55,18 @@ export const ButtonAddService = styled(Button)`
   &:disabled {
     opacity: 0.6;
     cursor: not-allowed;
+  }
+
+  @media (max-width: 768px) {
+    padding: 8px 16px;
+    width: 100%;
+    font-size: 14px;
+    height: 40px;
+    border-radius: 8px;
+    font-weight: 600;
+    text-transform: capitalize;
+    background-color: #000;
+    color: #fff;
   }
 `;
 

@@ -6,13 +6,25 @@ export const Container = styled(Box)`
   top: 50%;
   left: 50%;
   transform: translate(-50%, -50%);
-  width: 100%;
-  max-width: 420px;
-  border-radius: 16px;
+
+  width: 90%;
+  max-width: 360px;
+
   background-color: #fff;
-  padding: 28px 24px;
-  box-shadow: 0 24px 48px rgba(0, 0, 0, 0.14), 0 8px 16px rgba(0, 0, 0, 0.08);
+  border-radius: 16px;
+  padding: 24px;
+
+  box-shadow:
+    0 20px 40px rgba(0, 0, 0, 0.15),
+    0 8px 16px rgba(0, 0, 0, 0.08);
+
   outline: none;
+
+  @media (max-width: 600px) {
+    width: 92%;
+    padding: 20px;
+    border-radius: 14px;
+  }
 `;
 
 export const TextModal = styled(Typography)`

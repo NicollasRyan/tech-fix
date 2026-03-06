@@ -6,20 +6,15 @@ import { auth } from "../../firebase.ts";
 import { zodResolver } from "@hookform/resolvers/zod";
 import {
   ButoonForm,
-  ButtonLogin,
   Container,
   ContainerForm,
   LinkForm,
-  TextRegister,
   Title,
 } from "./styles.ts";
-import {
-  FacebookIcon,
-  GoogleIcon,
-} from "../../components/CustonIcons/index.tsx";
+
 import { loginSchema } from "./loginSchema.ts";
 import { FirebaseError } from "firebase/app";
-import { useAuth } from "../../contexts/AuthContext.tsx";
+import React from "react";
 
 function Login() {
   const {
@@ -32,17 +27,6 @@ function Login() {
   });
   const navigate = useNavigate();
 
-
-const { loginWithGoogle } = useAuth();
-
-const handleGoogleLogin = async () => {
-  try {
-    await loginWithGoogle();
-    navigate("/");
-  } catch (error) {
-    console.error("Erro no login com Google:", error);
-  }
-};
 
   const onSubmit = async (data: any) => {
     console.log(data);
@@ -115,15 +99,6 @@ const handleGoogleLogin = async () => {
           <ButoonForm type="submit">Login</ButoonForm>
           <LinkForm to="/forgot-password">Esqueceu a senha?</LinkForm>
         </form>
-        <ButtonLogin onClick={handleGoogleLogin}>
-          <GoogleIcon /> Login com Google
-        </ButtonLogin>
-        <ButtonLogin>
-          <FacebookIcon /> Login com Facebook
-        </ButtonLogin>
-        <TextRegister>
-          Não tem uma conta? <LinkForm to="/register">Register</LinkForm>
-        </TextRegister>
       </ContainerForm>
     </Container>
   );

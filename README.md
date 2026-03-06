@@ -5,7 +5,8 @@ Sistema para cadastro de servicos tecnicos com notificacao por data no proprio a
 ## Execucao
 
 1. Crie `.env` com base em `.env.example`.
-2. Instale dependencias e rode:
+2. Crie `functions/.env` com base em `functions/.env.example`.
+3. Instale dependencias e rode:
 
 ```bash
 npm install
@@ -20,4 +21,9 @@ npx firebase-tools deploy --only firestore --project tech-fix-aee39
 
 ## Observacao
 
-Este projeto nao usa mais Cloud Functions para Google Calendar/e-mail automatico.
+Google Calendar agora roda via Cloud Functions (backend serverless).
+
+Variaveis obrigatorias:
+
+- Frontend (`.env`): `REACT_APP_GOOGLE_OAUTH_CLIENT_ID`
+- Functions (`functions/.env`): `GOOGLE_OAUTH_CLIENT_ID`, `GOOGLE_OAUTH_CLIENT_SECRET`
