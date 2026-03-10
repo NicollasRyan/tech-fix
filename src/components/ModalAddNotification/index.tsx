@@ -26,6 +26,8 @@ type Props = {
   fetchService: () => void;
   clientName?: string;
   serviceType?: string;
+  onSuccess?: (message: string) => void;
+  onError?: (message: string) => void;
 };
 
 export const ModalAddNotification = ({
@@ -35,31 +37,42 @@ export const ModalAddNotification = ({
   fetchService,
   clientName = "Cliente",
   serviceType = "Servico",
+  onSuccess,
+  onError,
 }: Props) => {
   const [date, setDate] = useState<Dayjs | null>(null);
   const [description, setDescription] = useState<string>("");
   const { accessToken, googleConnected } = useAuth();
 
   const handleSave = async () => {
-    if (!date) return;
-
-    await updateDoc(doc(db, "services", serviceId), {
-      notificationDate: Timestamp.fromDate(date.toDate()),
-      descriptionMaintenance: description,
-      updatedAt: Timestamp.now(),
-    });
-
-    if (accessToken && googleConnected) {
-      await createEventWithAutoReconnect(accessToken, {
-        clientName,
-        serviceType,
-        notificationDate: date.toDate(),
-        description,
-      });
+    if (!date) {
+      onError?.("Selecione uma data para notificação.");
+      return;
     }
 
-    setShowModal(false);
-    fetchService();
+    try {
+      await updateDoc(doc(db, "services", serviceId), {
+        notificationDate: Timestamp.fromDate(date.toDate()),
+        descriptionMaintenance: description,
+        updatedAt: Timestamp.now(),
+      });
+
+      if (accessToken && googleConnected) {
+        await createEventWithAutoReconnect(accessToken, {
+          clientName,
+          serviceType,
+          notificationDate: date.toDate(),
+          description,
+        });
+      }
+
+      setShowModal(false);
+      fetchService();
+      onSuccess?.("Notificação salva com sucesso.");
+    } catch (error) {
+      console.error("Erro ao salvar notificação:", error);
+      onError?.("Erro ao salvar notificação.");
+    }
   };
 
   return (

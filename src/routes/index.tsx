@@ -8,12 +8,14 @@ import Profile from "../pages/profile/index.tsx";
 import ProfileEdit from "../pages/profile/edit/index.tsx";
 import { AddService } from "../pages/addService/index.tsx";
 import { AddMaintenance } from "../pages/addMaintenance/index.tsx";
+import ForgotPassword from "../pages/forgotPassword/index.tsx";
 
 export function AppRoutes() {
   return (
     <BrowserRouter>
       <Routes>
         <Route path="login" element={<Login />} />
+        <Route path="forgot-password" element={<ForgotPassword />} />
         <Route element={<PrivateRoute />}>
           <Route index element={<Home />} />
 

@@ -14,8 +14,9 @@ import { getGoogleCalendarAccessTokenFromPopup } from "../services/googleTokenPo
 type AuthContextType = {
   user?: User | null;
   accessToken?: string | null;
-  connectGoogleCalendar?: () => Promise<void>;
+  connectGoogleCalendar?: () => Promise<boolean>;
   disconnectGoogleCalendar?: () => Promise<void>;
+  clearError?: () => void;
   googleConnected?: boolean;
   loading?: boolean;
   loadingAuth?: boolean;
@@ -41,7 +42,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       throw new Error("Usuário não autenticado.");
     }
 
-    if (googleLoading) return;
+    if (googleLoading) return false;
 
     try {
       setGoogleLoading(true);
@@ -56,6 +57,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         localStorage.setItem("googleAccessToken", token);
         localStorage.setItem("googleTokenCreated", Date.now().toString());
       }
+      setError(null);
 
       await setDoc(
         doc(db, "users", auth.currentUser.uid),
@@ -66,13 +68,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         },
         { merge: true },
       );
+      return true;
     } catch (error: any) {
-      if (error.code !== "auth/cancelled-popup-request") {
-        console.error("Erro ao conectar Google Calendar:", error);
-        setError(
-          "Não foi possível concluir a conexão com Google Calendar. Tente novamente.",
-        );
-      }
+      if (error.code === "auth/cancelled-popup-request") return false;
+      console.error("Erro ao conectar Google Calendar:", error);
+      setError(
+        "Não foi possível concluir a conexão com Google Calendar. Tente novamente.",
+      );
+      throw error;
     } finally {
       setGoogleLoading(false);
     }
@@ -87,9 +90,41 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
     setAccessToken(null);
     setGoogleConnected(false);
+    setError(null);
     localStorage.removeItem("googleAccessToken");
     localStorage.removeItem("googleTokenCreated");
   };
+
+  const clearError = () => setError(null);
+
+  useEffect(() => {
+    const onTokenExpired = () => {
+      setError("Sua sessão do Google expirou. Reconecte para continuar.");
+    };
+
+    const onTokenUpdated = (event: Event) => {
+      const customEvent = event as CustomEvent<{ token?: string }>;
+      const token = customEvent.detail?.token;
+      if (!token) return;
+      setAccessToken(token);
+      setGoogleConnected(true);
+      setError(null);
+    };
+
+    window.addEventListener("google-token-expired", onTokenExpired);
+    window.addEventListener(
+      "google-token-updated",
+      onTokenUpdated as EventListener,
+    );
+
+    return () => {
+      window.removeEventListener("google-token-expired", onTokenExpired);
+      window.removeEventListener(
+        "google-token-updated",
+        onTokenUpdated as EventListener,
+      );
+    };
+  }, []);
 
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, async (currentUser) => {
@@ -112,7 +147,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             localStorage.removeItem("googleAccessToken");
             localStorage.removeItem("googleTokenCreated");
             setAccessToken(null);
+            setError("Sua sessão do Google expirou. Reconecte para continuar.");
           }
+        } else {
+          setAccessToken(null);
         }
 
         if (userDoc.exists()) {
@@ -134,6 +172,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
               setAccessToken(null);
               localStorage.removeItem("googleAccessToken");
               localStorage.removeItem("googleTokenCreated");
+              setError(
+                "A conexão com Google Calendar expirou (30 dias). Reconecte no perfil.",
+              );
             } else {
               setGoogleConnected(true);
             }
@@ -167,6 +208,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         googleConnected,
         googleLoading,
         error,
+        clearError,
         loadingAuth,
         loadingData,
         setLoadingData,

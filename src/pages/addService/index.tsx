@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { Controller, useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import {
@@ -12,7 +12,6 @@ import {
 import { FirebaseError } from "firebase/app";
 import { auth, db } from "../../firebase.ts";
 import { serviceSchema } from "./serviceSchema.ts";
-// import { sendNotificationEmail } from "../../services/notificationEmail.ts";
 import {
   normalizeServiceType,
   SERVICE_TYPES,
@@ -52,6 +51,7 @@ import {
   Box,
   Alert,
   AlertTitle,
+  Snackbar,
 } from "@mui/material";
 import { DatePicker } from "@mui/x-date-pickers/DatePicker";
 import { LocalizationProvider } from "@mui/x-date-pickers/LocalizationProvider";
@@ -120,6 +120,39 @@ export const AddService = ({
   const isEdit = Boolean(paramServiceId);
   const { accessToken, googleConnected } = useAuth();
   const navigate = useNavigate();
+  const [feedback, setFeedback] = useState<{
+    open: boolean;
+    severity: "success" | "error";
+    message: string;
+  }>({
+    open: false,
+    severity: "success",
+    message: "",
+  });
+
+  const notifySuccess = useCallback((message: string) => {
+    if (onSuccess) {
+      onSuccess(message);
+      return;
+    }
+    setFeedback({
+      open: true,
+      severity: "success",
+      message,
+    });
+  }, [onSuccess]);
+
+  const notifyError = useCallback((message: string) => {
+    if (onError) {
+      onError(message);
+      return;
+    }
+    setFeedback({
+      open: true,
+      severity: "error",
+      message,
+    });
+  }, [onError]);
 
   useEffect(() => {
     if (!isEdit || initialData || loading) return;
@@ -153,14 +186,14 @@ export const AddService = ({
         }
       } catch (error) {
         console.error("Erro ao buscar serviço:", error);
-        onError?.("Erro ao carregar os dados do serviço.");
+        notifyError("Erro ao carregar os dados do serviço.");
       } finally {
         setLoading(false);
       }
     };
 
     fetchServiceData();
-  }, [isEdit, paramServiceId, initialData, loading, onError]);
+  }, [isEdit, paramServiceId, initialData, loading, notifyError]);
 
   const {
     control,
@@ -236,7 +269,7 @@ export const AddService = ({
   const onSubmit = async (data: FormValues) => {
     const user = auth.currentUser;
     if (!user) {
-      onError?.("Usuario nao autenticado. Faca login novamente.");
+      notifyError("Usuario nao autenticado. Faca login novamente.");
       return;
     }
 
@@ -248,7 +281,7 @@ export const AddService = ({
         ? Timestamp.fromDate(data.notificationDate.toDate())
         : null;
     if (!parsedValue || parsedValue <= 0) {
-      onError?.("Valor do serviço inválido. Informe um número positivo.");
+      notifyError("Valor do serviço inválido. Informe um número positivo.");
       return;
     }
     try {
@@ -306,15 +339,21 @@ export const AddService = ({
       }
 
       reset(defaultValues);
-      onSuccess?.(
-        isEdit
-          ? "Servico atualizado com sucesso."
-          : "Servico salvo com sucesso.",
-      );
-      navigate(isEdit ? "/serviceDetails/" + (paramServiceId || "") : "/");
+      const successMessage = isEdit
+        ? "Servico atualizado com sucesso."
+        : "Servico salvo com sucesso.";
+      notifySuccess(successMessage);
+      navigate(isEdit ? "/serviceDetails/" + (paramServiceId || "") : "/", {
+        state: {
+          feedback: {
+            severity: "success",
+            message: successMessage,
+          },
+        },
+      });
     } catch (error) {
       console.error("Erro ao salvar servico:", error);
-      onError?.(toUserErrorMessage(error));
+      notifyError(toUserErrorMessage(error));
     }
   };
 
@@ -613,6 +652,21 @@ export const AddService = ({
           </FormCard>
         )}
       </Container>
+      <Snackbar
+        open={feedback.open}
+        autoHideDuration={4000}
+        onClose={() => setFeedback((prev) => ({ ...prev, open: false }))}
+        anchorOrigin={{ vertical: "bottom", horizontal: "center" }}
+      >
+        <Alert
+          onClose={() => setFeedback((prev) => ({ ...prev, open: false }))}
+          severity={feedback.severity}
+          variant="filled"
+          sx={{ width: "100%" }}
+        >
+          {feedback.message}
+        </Alert>
+      </Snackbar>
     </LocalizationProvider>
   );
 };

@@ -7,6 +7,7 @@ import {
   MenuItem,
   CircularProgress,
   Box,
+  Snackbar,
 } from "@mui/material";
 import { collection, onSnapshot, query, where } from "firebase/firestore";
 import { onAuthStateChanged } from "firebase/auth";
@@ -30,7 +31,7 @@ import {
 } from "./styles.ts";
 import { NoService } from "../../components/NoService/index.tsx";
 import { useAuth } from "../../contexts/AuthContext.tsx";
-import { useNavigate } from "react-router-dom";
+import { useLocation, useNavigate } from "react-router-dom";
 import React from "react";
 
 type FilterType = "all" | ServiceType;
@@ -38,8 +39,19 @@ type FilterType = "all" | ServiceType;
 function Home() {
   const [services, setServices] = useState<ServiceDoc[]>([]);
   const [filter, setFilter] = useState<FilterType>("all");
-  const { googleConnected, loadingData, setLoadingData } = useAuth();
+  const { googleConnected, loadingData, setLoadingData, error, clearError } =
+    useAuth();
   const navigate = useNavigate();
+  const location = useLocation();
+  const [feedback, setFeedback] = useState<{
+    open: boolean;
+    severity: "success" | "error";
+    message: string;
+  }>({
+    open: false,
+    severity: "success",
+    message: "",
+  });
 
   console.log("Google Connected:", googleConnected);
 
@@ -78,6 +90,28 @@ function Home() {
       unsubscribeSnapshot?.();
     };
   }, [setLoadingData]);
+
+  useEffect(() => {
+    const stateFeedback = (location.state as any)?.feedback;
+    if (!stateFeedback?.message) return;
+
+    setFeedback({
+      open: true,
+      severity: stateFeedback.severity === "error" ? "error" : "success",
+      message: stateFeedback.message,
+    });
+    navigate(location.pathname, { replace: true });
+  }, [location.pathname, location.state, navigate]);
+
+  useEffect(() => {
+    if (!error) return;
+    setFeedback({
+      open: true,
+      severity: "error",
+      message: error,
+    });
+    clearError?.();
+  }, [clearError, error]);
 
   return (
     <Container>
@@ -152,6 +186,22 @@ function Home() {
           <NoService />
         )}
       </BoxServices>
+
+      <Snackbar
+        open={feedback.open}
+        autoHideDuration={4000}
+        onClose={() => setFeedback((prev) => ({ ...prev, open: false }))}
+        anchorOrigin={{ vertical: "bottom", horizontal: "center" }}
+      >
+        <Alert
+          onClose={() => setFeedback((prev) => ({ ...prev, open: false }))}
+          severity={feedback.severity}
+          variant="filled"
+          sx={{ width: "100%" }}
+        >
+          {feedback.message}
+        </Alert>
+      </Snackbar>
     </Container>
   );
 }

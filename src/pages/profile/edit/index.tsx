@@ -19,9 +19,8 @@ import {
   ButtonCancel,
   ButtonSave,
   ErrorMessage,
-  SuccessMessage,
 } from "./styles.ts";
-import { Box, CircularProgress, Alert } from "@mui/material";
+import { Box, CircularProgress, Alert, Snackbar } from "@mui/material";
 import ArrowBackIcon from "@mui/icons-material/ArrowBack";
 import { IconButton } from "@mui/material";
 import React from "react";
@@ -30,10 +29,16 @@ function ProfileEdit() {
   const navigate = useNavigate();
   const { user, loading: authLoading } = useAuth();
   const [loading, setLoading] = useState(false);
-  const [successMessage, setSuccessMessage] = useState("");
-  const [errorMessage, setErrorMessage] = useState("");
+  const [feedback, setFeedback] = useState<{
+    open: boolean;
+    severity: "success" | "error";
+    message: string;
+  }>({
+    open: false,
+    severity: "success",
+    message: "",
+  });
 
-  // Função para formatar telefone
   const formatPhoneNumber = (value: string) => {
     const cleaned = value.replace(/\D/g, "");
     if (cleaned.length <= 2) {
@@ -68,7 +73,6 @@ function ProfileEdit() {
     }
 
     if (user) {
-      // Buscar dados do usuário do Firestore
       const fetchUserData = async () => {
         try {
           const userDoc = await getDoc(doc(db, "users", user.uid));
@@ -82,7 +86,6 @@ function ProfileEdit() {
               confirmPassword: "",
             });
           } else {
-            // Se não existe documento, apenas reseta com dados do Auth
             reset({
               displayName: user.displayName || "",
               phoneNumber: "",
@@ -93,7 +96,6 @@ function ProfileEdit() {
           }
         } catch (error) {
           console.error("Erro ao buscar dados do usuário:", error);
-          // Fallback: reseta com dados apenas do Auth
           reset({
             displayName: user.displayName || "",
             phoneNumber: "",
@@ -112,16 +114,13 @@ function ProfileEdit() {
     if (!user) return;
 
     setLoading(true);
-    setErrorMessage("");
-    setSuccessMessage("");
+    setFeedback((prev) => ({ ...prev, open: false, message: "" }));
 
     try {
-      // Atualizar displayName no Firebase Auth
       await updateProfile(user, {
         displayName: data.displayName,
       });
 
-      // Salvar phoneNumber em um documento customizado no Firestore
       await setDoc(
         doc(db, "users", user.uid),
         {
@@ -133,9 +132,7 @@ function ProfileEdit() {
         { merge: true }
       );
 
-      // Se fornecidos, atualizar a senha
       if (data.currentPassword && data.newPassword) {
-        // Reautenticar o usuário com a senha atual
         const credentials = EmailAuthProvider.credential(
           user.email!,
           data.currentPassword
@@ -143,11 +140,14 @@ function ProfileEdit() {
         
         await reauthenticateWithCredential(user as User, credentials);
         
-        // Atualizar para nova senha
         await updatePassword(user as User, data.newPassword);
       }
 
-      setSuccessMessage("Perfil atualizado com sucesso!");
+      setFeedback({
+        open: true,
+        severity: "success",
+        message: "Perfil atualizado com sucesso!",
+      });
       
       setTimeout(() => {
         navigate("/profile");
@@ -156,11 +156,23 @@ function ProfileEdit() {
       console.error("Erro ao atualizar perfil:", error);
       
       if (error.code === "auth/wrong-password") {
-        setErrorMessage("Senha atual incorreta.");
+        setFeedback({
+          open: true,
+          severity: "error",
+          message: "Senha atual incorreta.",
+        });
       } else if (error.code === "auth/requires-recent-login") {
-        setErrorMessage("Para alterar a senha, você precisa fazer login novamente.");
+        setFeedback({
+          open: true,
+          severity: "error",
+          message: "Para alterar a senha, você precisa fazer login novamente.",
+        });
       } else {
-        setErrorMessage("Erro ao atualizar perfil. Tente novamente.");
+        setFeedback({
+          open: true,
+          severity: "error",
+          message: "Erro ao atualizar perfil. Tente novamente.",
+        });
       }
     } finally {
       setLoading(false);
@@ -198,16 +210,6 @@ function ProfileEdit() {
           </Box>
         </Box>
       </Header>
-
-      {successMessage && (
-        <SuccessMessage>{successMessage}</SuccessMessage>
-      )}
-
-      {errorMessage && (
-        <Alert severity="error" style={{ marginBottom: "24px" }}>
-          {errorMessage}
-        </Alert>
-      )}
 
       <FormCard>
         <form onSubmit={handleSubmit(onSubmit)}>
@@ -347,6 +349,21 @@ function ProfileEdit() {
           </FormActions>
         </form>
       </FormCard>
+      <Snackbar
+        open={feedback.open}
+        autoHideDuration={4000}
+        onClose={() => setFeedback((prev) => ({ ...prev, open: false }))}
+        anchorOrigin={{ vertical: "bottom", horizontal: "center" }}
+      >
+        <Alert
+          onClose={() => setFeedback((prev) => ({ ...prev, open: false }))}
+          severity={feedback.severity}
+          variant="filled"
+          sx={{ width: "100%" }}
+        >
+          {feedback.message}
+        </Alert>
+      </Snackbar>
     </ContainerEdit>
   );
 }

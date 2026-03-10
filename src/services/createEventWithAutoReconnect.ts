@@ -9,6 +9,7 @@ export async function createEventWithAutoReconnect(
     return await createCalendarEvent(token, eventData);
   } catch (error: any) {
     if (error.message === "GOOGLE_TOKEN_EXPIRED") {
+      window.dispatchEvent(new CustomEvent("google-token-expired"));
       const newToken = await reconnectGoogle();
       return await createCalendarEvent(newToken, eventData);
     }

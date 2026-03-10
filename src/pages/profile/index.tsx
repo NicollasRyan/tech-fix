@@ -29,7 +29,17 @@ import {
   ButtonEdit,
   LogoutIconButton,
 } from "./styles.ts";
-import { Box, Button, CircularProgress, Container, IconButton, useTheme, useMediaQuery } from "@mui/material";
+import {
+  Box,
+  Button,
+  CircularProgress,
+  Container,
+  IconButton,
+  useTheme,
+  useMediaQuery,
+  Snackbar,
+  Alert,
+} from "@mui/material";
 import { ModalLogout } from "../../components/ModalLogout/index.tsx";
 import ArrowBackIcon from "@mui/icons-material/ArrowBack";
 import { Logout, Login } from "@mui/icons-material";
@@ -43,11 +53,22 @@ function Profile() {
     googleConnected,
     connectGoogleCalendar,
     disconnectGoogleCalendar,
+    error,
+    clearError,
   } = useAuth();
   const [services, setServices] = useState<ServiceDoc[]>([]);
   const [showLogoutModal, setShowLogoutModal] = useState(false);
   const [loadingServices, setLoadingServices] = useState(true);
   const [userPhone, setUserPhone] = useState<string>("");
+  const [feedback, setFeedback] = useState<{
+    open: boolean;
+    severity: "success" | "error";
+    message: string;
+  }>({
+    open: false,
+    severity: "success",
+    message: "",
+  });
 
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down("sm"));
@@ -90,12 +111,64 @@ function Profile() {
     }
   }, [user, authLoading, navigate]);
 
+  useEffect(() => {
+    if (!error) return;
+    setFeedback({
+      open: true,
+      severity: "error",
+      message: error,
+    });
+    clearError?.();
+  }, [clearError, error]);
+
   const handleLogout = async () => {
     try {
       await signOut(auth);
       navigate("/login");
     } catch (error) {
       console.error("Erro ao fazer logout:", error);
+      setFeedback({
+        open: true,
+        severity: "error",
+        message: "Erro ao fazer logout.",
+      });
+    }
+  };
+
+  const handleConnectGoogle = async () => {
+    try {
+      const connected = await connectGoogleCalendar?.();
+      if (!connected) return;
+      setFeedback({
+        open: true,
+        severity: "success",
+        message: "Google Calendar conectado com sucesso.",
+      });
+    } catch (error) {
+      console.error("Erro ao conectar Google Calendar:", error);
+      setFeedback({
+        open: true,
+        severity: "error",
+        message: "Erro ao conectar Google Calendar.",
+      });
+    }
+  };
+
+  const handleDisconnectGoogle = async () => {
+    try {
+      await disconnectGoogleCalendar?.();
+      setFeedback({
+        open: true,
+        severity: "success",
+        message: "Google Calendar desconectado com sucesso.",
+      });
+    } catch (error) {
+      console.error("Erro ao desconectar Google Calendar:", error);
+      setFeedback({
+        open: true,
+        severity: "error",
+        message: "Erro ao desconectar Google Calendar.",
+      });
     }
   };
 
@@ -194,12 +267,12 @@ function Profile() {
             </InfoValue>
             {isMobile ? (
               googleConnected ? (
-                <LogoutIconButton onClick={disconnectGoogleCalendar} size="small">
+                <LogoutIconButton onClick={handleDisconnectGoogle} size="small">
                   <Logout />
                 </LogoutIconButton>
               ) : (
                 <IconButton
-                  onClick={connectGoogleCalendar}
+                  onClick={handleConnectGoogle}
                   size="small"
                   sx={{
                     borderRadius: 2,
@@ -215,7 +288,7 @@ function Profile() {
               )
             ) : googleConnected ? (
               <Button
-                onClick={disconnectGoogleCalendar}
+                onClick={handleDisconnectGoogle}
                 variant="outlined"
                 size="small"
                 sx={{
@@ -234,7 +307,7 @@ function Profile() {
               </Button>
             ) : (
               <Button
-                onClick={connectGoogleCalendar}
+                onClick={handleConnectGoogle}
                 variant="outlined"
                 size="small"
                 sx={{
@@ -302,6 +375,21 @@ function Profile() {
         setShowModal={setShowLogoutModal}
         handleLogout={handleLogout}
       />
+      <Snackbar
+        open={feedback.open}
+        autoHideDuration={4000}
+        onClose={() => setFeedback((prev) => ({ ...prev, open: false }))}
+        anchorOrigin={{ vertical: "bottom", horizontal: "center" }}
+      >
+        <Alert
+          onClose={() => setFeedback((prev) => ({ ...prev, open: false }))}
+          severity={feedback.severity}
+          variant="filled"
+          sx={{ width: "100%" }}
+        >
+          {feedback.message}
+        </Alert>
+      </Snackbar>
     </ContainerProfile>
   );
 }

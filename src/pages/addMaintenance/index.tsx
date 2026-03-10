@@ -6,6 +6,8 @@ import {
   Chip,
   Box,
   InputAdornment,
+  Snackbar,
+  Alert,
 } from "@mui/material";
 import {
   arrayUnion,
@@ -64,13 +66,21 @@ export const AddMaintenance = () => {
   const [searchParams] = useSearchParams();
   const queryMaintenanceId = searchParams.get("maintenanceId");
 
-  // Detectar maintenanceId de ambas as rotas (query param ou rota param)
   const maintenanceId = paramMaintenanceId || queryMaintenanceId;
 
   const [maintenanceToEdit, setMaintenanceToEdit] =
     useState<Maintenance | null>(null);
   const [loading, setLoading] = useState(false);
   const [allMaintenances, setAllMaintenances] = useState<Maintenance[]>([]);
+  const [feedback, setFeedback] = useState<{
+    open: boolean;
+    severity: "success" | "error";
+    message: string;
+  }>({
+    open: false,
+    severity: "success",
+    message: "",
+  });
 
   const {
     handleSubmit,
@@ -110,7 +120,11 @@ export const AddMaintenance = () => {
         }
       } catch (error) {
         console.error("Erro ao buscar manutenção:", error);
-        alert("Erro ao carregar manutenção");
+        setFeedback({
+          open: true,
+          severity: "error",
+          message: "Erro ao carregar manutenção.",
+        });
       } finally {
         setLoading(false);
       }
@@ -119,7 +133,6 @@ export const AddMaintenance = () => {
     fetchMaintenanceData();
   }, [maintenanceId, serviceId, maintenanceToEdit, loading]);
 
-  // Preencher o formulário quando maintenanceToEdit mudar
   useEffect(() => {
     if (maintenanceToEdit) {
       reset({
@@ -154,13 +167,16 @@ export const AddMaintenance = () => {
     try {
       const parsedValue = data.valueService;
 
-      if (isNaN(parsedValue) || parsedValue <= 0) {
-        alert("Valor do serviço inválido");
+      if (!parsedValue || parsedValue <= 0) {
+        setFeedback({
+          open: true,
+          severity: "error",
+          message: "Valor do serviço inválido.",
+        });
         return;
       }
 
       if (maintenanceToEdit) {
-        // Editar - substituir a manutenção na lista
         const updated = allMaintenances.map((m: any) =>
           m.id === maintenanceToEdit.id
             ? {
@@ -178,7 +194,6 @@ export const AddMaintenance = () => {
           updatedAt: Timestamp.now(),
         });
       } else {
-        // Criar nova - adicionar à lista
         await updateDoc(doc(db, "services", serviceId), {
           manutencoes: arrayUnion({
             id: crypto.randomUUID(),
@@ -192,10 +207,23 @@ export const AddMaintenance = () => {
         });
       }
 
-      navigate("/serviceDetails/" + serviceId);
+      navigate("/serviceDetails/" + serviceId, {
+        state: {
+          feedback: {
+            severity: "success",
+            message: maintenanceToEdit
+              ? "Manutenção atualizada com sucesso."
+              : "Manutenção adicionada com sucesso.",
+          },
+        },
+      });
     } catch (error) {
       console.error("Erro ao salvar manutenção:", error);
-      alert("Erro ao salvar manutenção");
+      setFeedback({
+        open: true,
+        severity: "error",
+        message: "Erro ao salvar manutenção.",
+      });
     }
   };
 
@@ -232,7 +260,7 @@ export const AddMaintenance = () => {
                     control={control}
                     render={({ field }) => (
                       <NumericFormat
-                        {...field}
+                        value={field.value ?? ""}
                         customInput={TextField}
                         fullWidth
                         thousandSeparator="."
@@ -244,7 +272,7 @@ export const AddMaintenance = () => {
                         error={!!errors.valueService}
                         helperText={errors.valueService?.message}
                         onValueChange={(values) => {
-                          field.onChange(values.floatValue ?? 0);
+                          field.onChange(values.floatValue ?? null);
                         }}
                       />
                     )}
@@ -305,6 +333,21 @@ export const AddMaintenance = () => {
           </FormCard>
         )}
       </Container>
+      <Snackbar
+        open={feedback.open}
+        autoHideDuration={4000}
+        onClose={() => setFeedback((prev) => ({ ...prev, open: false }))}
+        anchorOrigin={{ vertical: "bottom", horizontal: "center" }}
+      >
+        <Alert
+          onClose={() => setFeedback((prev) => ({ ...prev, open: false }))}
+          severity={feedback.severity}
+          variant="filled"
+          sx={{ width: "100%" }}
+        >
+          {feedback.message}
+        </Alert>
+      </Snackbar>
     </LocalizationProvider>
   );
 };

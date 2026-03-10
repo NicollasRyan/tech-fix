@@ -36,9 +36,7 @@ export async function getGoogleCalendarAccessTokenFromPopup() {
 
   try {
     await signOut(secondaryAuth);
-  } catch {
-    // ignore signOut failures on ephemeral auth instance
-  }
+  } catch {}
 
   if (!token) {
     throw new Error("GOOGLE_RECONNECT_FAILED");

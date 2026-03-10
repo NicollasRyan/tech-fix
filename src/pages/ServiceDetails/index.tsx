@@ -6,6 +6,7 @@ import {
   Typography,
   Alert,
   AlertTitle,
+  Snackbar,
   useTheme,
   useMediaQuery,
   Tooltip,
@@ -18,7 +19,7 @@ import {
   updateDoc,
 } from "firebase/firestore";
 import { useCallback, useEffect, useState } from "react";
-import { useNavigate, useParams } from "react-router-dom";
+import { useLocation, useNavigate, useParams } from "react-router-dom";
 import ArrowBackIcon from "@mui/icons-material/ArrowBack";
 import AddIcon from "@mui/icons-material/Add";
 import EditIcon from "@mui/icons-material/Edit";
@@ -149,6 +150,7 @@ const CardService = ({
 function ServiceDetails() {
   const { id } = useParams();
   const navigate = useNavigate();
+  const location = useLocation();
   const { googleConnected } = useAuth();
 
   const [service, setService] = useState<ServiceDoc | null>(null);
@@ -156,6 +158,15 @@ function ServiceDetails() {
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [showDeleteMaintenance, setShowDeleteMaintenance] = useState(false);
   const [showNotificationModal, setShowNotificationModal] = useState(false);
+  const [feedback, setFeedback] = useState<{
+    open: boolean;
+    severity: "success" | "error";
+    message: string;
+  }>({
+    open: false,
+    severity: "success",
+    message: "",
+  });
 
   const safeParts = Array.isArray(service?.usedParts) ? service.usedParts : [];
 
@@ -199,19 +210,44 @@ function ServiceDetails() {
     fetchService();
   }, [fetchService]);
 
+  useEffect(() => {
+    const stateFeedback = (location.state as any)?.feedback;
+    if (!stateFeedback?.message) return;
+
+    setFeedback({
+      open: true,
+      severity: stateFeedback.severity === "error" ? "error" : "success",
+      message: stateFeedback.message,
+    });
+    navigate(location.pathname, { replace: true });
+  }, [location.pathname, location.state, navigate]);
+
   const deleteMaintenance = async (maintenanceId: string) => {
     if (!service) return;
+    try {
+      const updated = (service.manutencoes || []).filter(
+        (maintenance: any) => maintenance.id !== maintenanceId,
+      );
 
-    const updated = (service.manutencoes || []).filter(
-      (maintenance: any) => maintenance.id !== maintenanceId,
-    );
+      await updateDoc(doc(db, "services", service.id), {
+        manutencoes: updated,
+        updatedAt: Timestamp.now(),
+      });
 
-    await updateDoc(doc(db, "services", service.id), {
-      manutencoes: updated,
-      updatedAt: Timestamp.now(),
-    });
-
-    fetchService();
+      fetchService();
+      setFeedback({
+        open: true,
+        severity: "success",
+        message: "Manutenção removida com sucesso.",
+      });
+    } catch (error) {
+      console.error("Erro ao excluir manutenção:", error);
+      setFeedback({
+        open: true,
+        severity: "error",
+        message: "Erro ao excluir manutenção.",
+      });
+    }
   };
 
   const handleDelete = async () => {
@@ -219,10 +255,21 @@ function ServiceDetails() {
     try {
       await deleteDoc(doc(db, "services", service.id));
       setShowDeleteModal(false);
-      navigate("/");
+      navigate("/", {
+        state: {
+          feedback: {
+            severity: "success",
+            message: "Serviço excluído com sucesso.",
+          },
+        },
+      });
     } catch (error) {
       console.error("Erro ao excluir serviço:", error);
-      alert("Erro ao excluir serviço");
+      setFeedback({
+        open: true,
+        severity: "error",
+        message: "Erro ao excluir serviço.",
+      });
     }
   };
 
@@ -489,6 +536,20 @@ function ServiceDetails() {
             serviceType={
               SERVICE_TYPE_LABELS[normalizeServiceType(service.serviceType)]
             }
+            onSuccess={(message) =>
+              setFeedback({
+                open: true,
+                severity: "success",
+                message,
+              })
+            }
+            onError={(message) =>
+              setFeedback({
+                open: true,
+                severity: "error",
+                message,
+              })
+            }
           />
 
           <ModalDeleteService
@@ -497,6 +558,21 @@ function ServiceDetails() {
             setShowModal={setShowDeleteModal}
             serviceId={id}
           />
+          <Snackbar
+            open={feedback.open}
+            autoHideDuration={4000}
+            onClose={() => setFeedback((prev) => ({ ...prev, open: false }))}
+            anchorOrigin={{ vertical: "bottom", horizontal: "center" }}
+          >
+            <Alert
+              onClose={() => setFeedback((prev) => ({ ...prev, open: false }))}
+              severity={feedback.severity}
+              variant="filled"
+              sx={{ width: "100%" }}
+            >
+              {feedback.message}
+            </Alert>
+          </Snackbar>
         </>
       )}
     </Container>
