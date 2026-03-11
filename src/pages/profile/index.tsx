@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useLocation, useNavigate } from "react-router-dom";
 import { signOut } from "firebase/auth";
 import {
   collection,
@@ -69,6 +69,8 @@ function Profile() {
     message: "",
   });
 
+  const location = useLocation()
+
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down("sm"));
 
@@ -112,6 +114,24 @@ function Profile() {
   }, [user, authLoading, navigate]);
 
   useEffect(() => {
+    const params = new URLSearchParams(location.search);
+
+  if (params.get("googleConnected") === "true") {
+    setFeedback({
+      open: true,
+      severity: "success",
+      message: "Google Calendar conectado com sucesso.",
+    });
+  }
+
+  if (params.get("googleError")) {
+    setFeedback({
+      open: true,
+      severity: "error",
+      message: "Erro ao conectar com o Google.",
+    });
+  }
+
     if (!error) return;
     setFeedback({
       open: true,
@@ -119,7 +139,7 @@ function Profile() {
       message: error,
     });
     clearError?.();
-  }, [clearError, error]);
+  }, [clearError, error, location]);
 
   const handleLogout = async () => {
     try {
@@ -138,18 +158,8 @@ function Profile() {
   const handleConnectGoogle = async () => {
     try {
       await connectGoogleCalendar?.();
-      setFeedback({
-        open: true,
-        severity: "success",
-        message: "Google Calendar conectado com sucesso.",
-      });
     } catch (error) {
       console.error("Erro ao conectar Google Calendar:", error);
-      setFeedback({
-        open: true,
-        severity: "error",
-        message: "Erro ao conectar Google Calendar.",
-      });
     }
   };
 
