@@ -31,7 +31,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [accessToken, setAccessToken] = useState<string | null>(null);
   const [googleConnected, setGoogleConnected] = useState(false);
-  const [googleLoading, setGoogleLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [loadingAuth, setLoadingAuth] = useState<boolean>(true);
   const [loadingData, setLoadingData] = useState<boolean>(true);
@@ -41,7 +40,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
     const uid = auth.currentUser.uid;
 
-    window.location.href = `${process.env.REACT_BASE_URL}/auth/google?uid=${uid}`;
+    window.location.href = `${process.env.REACT_APP_BASE_URL}/auth/google?uid=${uid}`;
   };
 
   const disconnectGoogleCalendar = async () => {
@@ -148,7 +147,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         connectGoogleCalendar,
         disconnectGoogleCalendar,
         googleConnected,
-        googleLoading,
         error,
         clearError,
         loadingAuth,

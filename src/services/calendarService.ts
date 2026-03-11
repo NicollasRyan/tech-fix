@@ -51,7 +51,7 @@ ${description || ""}
   };
 
   const response = await fetch(
-    `${process.env.REACT_BASE_URL}calendar/create-event`,
+    `${process.env.REACT_APP_BASE_URL}/calendar/create-event`,
     {
       method: "POST",
       headers: {

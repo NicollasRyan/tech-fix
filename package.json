@@ -54,6 +54,7 @@
     ]
   },
   "devDependencies": {
+    "@types/node": "^25.4.0",
     "@types/react-input-mask": "^3.0.6"
   }
 }

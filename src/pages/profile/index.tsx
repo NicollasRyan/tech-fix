@@ -44,12 +44,6 @@ import ArrowBackIcon from "@mui/icons-material/ArrowBack";
 import { Logout, Login } from "@mui/icons-material";
 import React from "react";
 
-type UserDoc = {
-  phoneNumber?: string;
-  googleConnected?: boolean;
-  googleRefreshToken?: string;
-};
-
 function Profile() {
   const navigate = useNavigate();
   const {
@@ -64,7 +58,6 @@ function Profile() {
   const [services, setServices] = useState<ServiceDoc[]>([]);
   const [showLogoutModal, setShowLogoutModal] = useState(false);
   const [loadingServices, setLoadingServices] = useState(true);
-  const [userData, setUserData] = useState<UserDoc | null>(null);
   const [userPhone, setUserPhone] = useState<string>("");
   const [feedback, setFeedback] = useState<{
     open: boolean;
@@ -91,7 +84,6 @@ function Profile() {
 
       const unsubscribeUser = onSnapshot(userRef, (docSnap) => {
         if (docSnap.exists()) {
-          setUserData(docSnap.data());
           setUserPhone(docSnap.data()?.phoneNumber || "");
         }
       });
