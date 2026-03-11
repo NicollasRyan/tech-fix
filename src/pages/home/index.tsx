@@ -53,8 +53,6 @@ function Home() {
     message: "",
   });
 
-  console.log("Google Connected:", googleConnected);
-
   useEffect(() => {
     let unsubscribeSnapshot: (() => void) | undefined;
     const unsubscribeAuth = onAuthStateChanged(auth, (user) => {

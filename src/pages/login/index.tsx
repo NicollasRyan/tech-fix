@@ -29,7 +29,6 @@ function Login() {
 
 
   const onSubmit = async (data: any) => {
-    console.log(data);
     try {
       await signInWithEmailAndPassword(auth, data.email, data.password);
       navigate("/");

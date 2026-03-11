@@ -31,7 +31,6 @@ import {
 } from "./styles.ts";
 import { PatternFormat, NumericFormat } from "react-number-format";
 import { useAuth } from "../../contexts/AuthContext.tsx";
-import { createEventWithAutoReconnect } from "../../services/createEventWithAutoReconnect.ts";
 import { AdapterDayjs } from "@mui/x-date-pickers/AdapterDayjs";
 import { useNavigate, useParams } from "react-router-dom";
 import { ptBR } from "@mui/x-date-pickers/locales";
@@ -58,8 +57,9 @@ import { LocalizationProvider } from "@mui/x-date-pickers/LocalizationProvider";
 import "dayjs/locale/pt-br";
 import { Add, ArrowBack } from "@mui/icons-material";
 import dayjs from "dayjs";
-import React from "react";
 import z from "zod";
+import { createCalendarEvent } from "../../services/calendarService.ts";
+import React from "react";
 dayjs.locale("pt-br");
 
 type FormValues = z.infer<typeof serviceSchema>;
@@ -118,7 +118,7 @@ export const AddService = ({
 
   const servicesRef = collection(db, "services");
   const isEdit = Boolean(paramServiceId);
-  const { accessToken, googleConnected } = useAuth();
+  const { googleConnected } = useAuth();
   const navigate = useNavigate();
   const [feedback, setFeedback] = useState<{
     open: boolean;
@@ -292,6 +292,7 @@ export const AddService = ({
           description: data?.description,
           valueService: parsedValue,
           notificationDate: notificationTimestamp,
+          descriptionMaintenance: data.descriptionMaintenance,
           phone: data?.phone,
           email: data?.email,
           cpf: data?.cpf,
@@ -329,8 +330,8 @@ export const AddService = ({
         await addDoc(servicesRef, createData);
       }
 
-      if (notificationTimestamp && accessToken && googleConnected) {
-        await createEventWithAutoReconnect(accessToken, {
+      if (notificationTimestamp && googleConnected) {
+        await createCalendarEvent(user.uid, {
           clientName: data.clientName,
           serviceType: data.serviceType,
           notificationDate: notificationTimestamp.toDate(),

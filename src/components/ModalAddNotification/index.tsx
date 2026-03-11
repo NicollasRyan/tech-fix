@@ -6,7 +6,7 @@ import { ptBR } from "@mui/x-date-pickers/locales";
 import dayjs, { Dayjs } from "dayjs";
 import { useState } from "react";
 import { doc, updateDoc, Timestamp } from "firebase/firestore";
-import { db } from "../../firebase.ts";
+import { auth, db } from "../../firebase.ts";
 import {
   BoxButtons,
   ButtonCancel,
@@ -15,9 +15,9 @@ import {
   Label,
   TextModal,
 } from "./styles.ts";
-import { createEventWithAutoReconnect } from "../../services/createEventWithAutoReconnect.ts";
 import { useAuth } from "../../contexts/AuthContext.tsx";
 import React from "react";
+import { createCalendarEvent } from "../../services/calendarService.ts";
 
 type Props = {
   showModal: boolean;
@@ -42,9 +42,16 @@ export const ModalAddNotification = ({
 }: Props) => {
   const [date, setDate] = useState<Dayjs | null>(null);
   const [description, setDescription] = useState<string>("");
-  const { accessToken, googleConnected } = useAuth();
+  const { googleConnected } = useAuth();
 
   const handleSave = async () => {
+    const user = auth.currentUser;
+
+    if (!user) {
+      // notifyError("Usuario nao autenticado. Faca login novamente.");
+      return;
+    }
+
     if (!date) {
       onError?.("Selecione uma data para notificação.");
       return;
@@ -57,8 +64,8 @@ export const ModalAddNotification = ({
         updatedAt: Timestamp.now(),
       });
 
-      if (accessToken && googleConnected) {
-        await createEventWithAutoReconnect(accessToken, {
+      if (googleConnected) {
+        await createCalendarEvent(user.uid, {
           clientName,
           serviceType,
           notificationDate: date.toDate(),

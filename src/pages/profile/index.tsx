@@ -7,7 +7,6 @@ import {
   where,
   onSnapshot,
   doc,
-  getDoc,
 } from "firebase/firestore";
 import { auth, db } from "../../firebase.ts";
 import { useAuth } from "../../contexts/AuthContext.tsx";
@@ -45,6 +44,12 @@ import ArrowBackIcon from "@mui/icons-material/ArrowBack";
 import { Logout, Login } from "@mui/icons-material";
 import React from "react";
 
+type UserDoc = {
+  phoneNumber?: string;
+  googleConnected?: boolean;
+  googleRefreshToken?: string;
+};
+
 function Profile() {
   const navigate = useNavigate();
   const {
@@ -59,6 +64,7 @@ function Profile() {
   const [services, setServices] = useState<ServiceDoc[]>([]);
   const [showLogoutModal, setShowLogoutModal] = useState(false);
   const [loadingServices, setLoadingServices] = useState(true);
+  const [userData, setUserData] = useState<UserDoc | null>(null);
   const [userPhone, setUserPhone] = useState<string>("");
   const [feedback, setFeedback] = useState<{
     open: boolean;
@@ -73,6 +79,7 @@ function Profile() {
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down("sm"));
 
+
   useEffect(() => {
     if (!authLoading && !user) {
       navigate("/login");
@@ -80,34 +87,35 @@ function Profile() {
     }
 
     if (user) {
-      const fetchUserData = async () => {
-        try {
-          const userDoc = await getDoc(doc(db, "users", user.uid));
-          if (userDoc.exists()) {
-            setUserPhone(userDoc.data()?.phoneNumber || "");
-          }
-        } catch (error) {
-          console.error("Erro ao buscar dados do usuário:", error);
-        }
-      };
+      const userRef = doc(db, "users", user.uid);
 
-      fetchUserData();
+      const unsubscribeUser = onSnapshot(userRef, (docSnap) => {
+        if (docSnap.exists()) {
+          setUserData(docSnap.data());
+          setUserPhone(docSnap.data()?.phoneNumber || "");
+        }
+      });
 
       const q = query(
         collection(db, "services"),
         where("userId", "==", user.uid),
       );
 
-      const unsubscribe = onSnapshot(q, (snapshot) => {
+      const unsubscribeServices = onSnapshot(q, (snapshot) => {
         const servicesList: ServiceDoc[] = [];
+
         snapshot.forEach((doc) => {
           servicesList.push({ id: doc.id, ...doc.data() } as ServiceDoc);
         });
+
         setServices(servicesList);
         setLoadingServices(false);
       });
 
-      return () => unsubscribe();
+      return () => {
+        unsubscribeUser();
+        unsubscribeServices();
+      };
     }
   }, [user, authLoading, navigate]);
 
@@ -137,8 +145,7 @@ function Profile() {
 
   const handleConnectGoogle = async () => {
     try {
-      const connected = await connectGoogleCalendar?.();
-      if (!connected) return;
+      await connectGoogleCalendar?.();
       setFeedback({
         open: true,
         severity: "success",
@@ -180,9 +187,9 @@ function Profile() {
 
     const maintenanceValue = Array.isArray(service.manutencoes)
       ? service.manutencoes.reduce(
-        (sum, m) => sum + Number(m?.valueService ?? 0),
-        0
-      )
+          (sum, m) => sum + Number(m?.valueService ?? 0),
+          0,
+        )
       : 0;
 
     return total + serviceValue + maintenanceValue;
@@ -325,7 +332,6 @@ function Profile() {
                 Conectar
               </Button>
             )}
-
           </Box>
         </InfoRow>
 
@@ -350,12 +356,14 @@ function Profile() {
         </StatCard>
 
         <StatCard>
-          <StatValue>{totalValue.toLocaleString("pt-BR", {
-            style: "currency",
-            currency: "BRL",
-            minimumFractionDigits: 2,
-            maximumFractionDigits: 2,
-          })}</StatValue>
+          <StatValue>
+            {totalValue.toLocaleString("pt-BR", {
+              style: "currency",
+              currency: "BRL",
+              minimumFractionDigits: 2,
+              maximumFractionDigits: 2,
+            })}
+          </StatValue>
           <StatLabel>Valor Total</StatLabel>
         </StatCard>
 

@@ -82,8 +82,6 @@ const CardService = ({
   const navigate = useNavigate();
   const safeParts = Array.isArray(usedParts) ? usedParts : [];
 
-  console.log(title);
-
   return (
     <CardServiceContent>
       <CardHeader>

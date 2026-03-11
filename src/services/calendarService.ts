@@ -1,5 +1,5 @@
 export async function createCalendarEvent(
-  accessToken: string,
+  userId: string,
   {
     clientName,
     serviceType,
@@ -16,7 +16,9 @@ export async function createCalendarEvent(
 
   const nextDay = new Date(notificationDate);
   nextDay.setDate(nextDay.getDate() + 1);
+
   const endDate = nextDay.toISOString().split("T")[0];
+
   const event = {
     summary: `Manutenção - ${clientName}`,
     description: `
@@ -49,20 +51,15 @@ ${description || ""}
   };
 
   const response = await fetch(
-    "https://www.googleapis.com/calendar/v3/calendars/primary/events",
+    `${process.env.REACT_BASE_URL}calendar/create-event`,
     {
       method: "POST",
       headers: {
-        Authorization: `Bearer ${accessToken}`,
         "Content-Type": "application/json",
       },
-      body: JSON.stringify(event),
+      body: JSON.stringify({ uid: userId, event }),
     },
   );
-
-  if (response.status === 401) {
-    throw new Error("GOOGLE_TOKEN_EXPIRED");
-  }
 
   if (!response.ok) {
     const error = await response.text();
