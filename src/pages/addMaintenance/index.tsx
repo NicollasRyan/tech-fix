@@ -199,7 +199,7 @@ export const AddMaintenance = () => {
             id: crypto.randomUUID(),
             title: data.title,
             description: data?.description,
-            valueService: parsedValue || 0,
+            valueService: parsedValue || null,
             usedParts: data?.usedParts || [],
             createdAt: Timestamp.now(),
           }),
