@@ -89,10 +89,11 @@ export const AddMaintenance = () => {
     control,
     watch,
     setValue,
-    formState: { errors },
+    formState: { errors, isSubmitting },
   } = useForm<MaintenanceFormValues>({
     resolver: zodResolver(maintenanceSchema),
     defaultValues,
+    
   });
   const usedParts = watch("usedParts") ?? [];
   const [pieceInput, setPieceInput] = useState("");
@@ -325,8 +326,8 @@ export const AddMaintenance = () => {
                 >
                   Cancelar
                 </ButtonCancel>
-                <ButtonSubmit type="submit">
-                  {maintenanceToEdit ? "Salvar alterações" : "Adicionar"}
+                <ButtonSubmit type="submit" disabled={isSubmitting}>
+                  {isSubmitting ? "Salvando..." : maintenanceToEdit ? "Salvar alterações" : "Adicionar"}
                 </ButtonSubmit>
               </BoxButtons>
             </form>
