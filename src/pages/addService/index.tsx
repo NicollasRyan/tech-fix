@@ -130,29 +130,35 @@ export const AddService = ({
     message: "",
   });
 
-  const notifySuccess = useCallback((message: string) => {
-    if (onSuccess) {
-      onSuccess(message);
-      return;
-    }
-    setFeedback({
-      open: true,
-      severity: "success",
-      message,
-    });
-  }, [onSuccess]);
+  const notifySuccess = useCallback(
+    (message: string) => {
+      if (onSuccess) {
+        onSuccess(message);
+        return;
+      }
+      setFeedback({
+        open: true,
+        severity: "success",
+        message,
+      });
+    },
+    [onSuccess],
+  );
 
-  const notifyError = useCallback((message: string) => {
-    if (onError) {
-      onError(message);
-      return;
-    }
-    setFeedback({
-      open: true,
-      severity: "error",
-      message,
-    });
-  }, [onError]);
+  const notifyError = useCallback(
+    (message: string) => {
+      if (onError) {
+        onError(message);
+        return;
+      }
+      setFeedback({
+        open: true,
+        severity: "error",
+        message,
+      });
+    },
+    [onError],
+  );
 
   useEffect(() => {
     if (!isEdit || initialData || loading) return;
@@ -269,7 +275,7 @@ export const AddService = ({
   const onSubmit = async (data: FormValues) => {
     const user = auth.currentUser;
     if (!user) {
-      notifyError("Usuario nao autenticado. Faca login novamente.");
+      notifyError("Usuario nao autenticado. Faça login novamente.");
       return;
     }
 
@@ -575,7 +581,9 @@ export const AddService = ({
                       },
                     }}
                   />
-                  <Box sx={{ mt: 2, display: "flex", gap: 1, flexWrap: "wrap" }}>
+                  <Box
+                    sx={{ mt: 2, display: "flex", gap: 1, flexWrap: "wrap" }}
+                  >
                     {usedParts?.map((piece, index) => (
                       <Chip
                         key={index}
@@ -627,13 +635,16 @@ export const AddService = ({
                             )}
                           />
                           <Label>Proxima Manutenção</Label>
-                          <TextField fullWidth {...register("descriptionMaintenance")} />
+                          <TextField
+                            fullWidth
+                            {...register("descriptionMaintenance")}
+                          />
                         </BoxDate>
                       ) : (
                         <Alert severity="warning" sx={{ mb: 2 }}>
                           <AlertTitle>Google Calendar não conectado</AlertTitle>
-                          Para usar notificações automáticas, conecte sua conta do Google
-                          nas configurações do perfil.
+                          Para usar notificações automáticas, conecte sua conta
+                          do Google nas configurações do perfil.
                         </Alert>
                       )}
                     </>
@@ -645,8 +656,12 @@ export const AddService = ({
                 <ButtonCancel onClick={() => navigate("/")}>
                   Cancelar
                 </ButtonCancel>
-                <ButtonSubmit type="submit">
-                  {isSubmitting ? "Salvando..." : isEdit ? "Salvar" : "Adicionar"}
+                <ButtonSubmit type="submit" disabled={isSubmitting}>
+                  {isSubmitting
+                    ? "Salvando..."
+                    : isEdit
+                      ? "Salvar"
+                      : "Adicionar"}
                 </ButtonSubmit>
               </BoxButtons>
             </form>
