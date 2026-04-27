@@ -19,6 +19,7 @@ export const serviceSchema = z.object({
   equipmentModel: z.string().optional(),
   equipmentBrand: z.string().optional(),
   usedParts: z.array(z.string()).optional(),
+  serviceDate: z.any().nullable(),
 
   notify: z.boolean(),
   notificationDate: z.any().nullable(),

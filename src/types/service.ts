@@ -6,7 +6,7 @@ export type FirestoreDateLike = Timestamp | { toDate: () => Date } | null;
 export type MaintenanceItem = {
   id: string;
   description: string;
-  createdAt: FirestoreDateLike;
+  dateService: FirestoreDateLike;
 };
 
 export type ServiceDoc = {
@@ -17,8 +17,8 @@ export type ServiceDoc = {
   description?: string;
   valueService: number | string;
   notificationDate: FirestoreDateLike;
-  createdAt: FirestoreDateLike;
-  updatedAt?: FirestoreDateLike;
+  serviceDate?: FirestoreDateLike;
+  createdAt?: FirestoreDateLike;
   manutencoes?: any[];
   phone?: string;
   email?: string;

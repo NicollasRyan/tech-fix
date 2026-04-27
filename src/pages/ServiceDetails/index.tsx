@@ -66,6 +66,10 @@ import React from "react";
 import { useAuth } from "../../contexts/AuthContext.tsx";
 import { CardEquipment } from "../../components/CardEquipment/index.tsx";
 import { CalendarToday, NotificationAdd } from "@mui/icons-material";
+import {
+  formatPtBrDate,
+  getServicePrimaryDate,
+} from "../../utils/firestoreDate.ts";
 
 const CardService = ({
   title,
@@ -88,8 +92,8 @@ const CardService = ({
         <CardTitle>{title}</CardTitle>
 
         <CardDateBadge>
-           <CalendarToday fontSize="small" />
-          {date.toDate().toLocaleDateString("pt-BR")}
+          <CalendarToday fontSize="small" />
+          {formatPtBrDate(date)}
         </CardDateBadge>
       </CardHeader>
 
@@ -194,6 +198,15 @@ function ServiceDetails() {
           navigate("/");
           return;
         }
+
+        if (!data.serviceDate && data.createdAt) {
+          updateDoc(doc(db, "services", id), {
+            serviceDate: data.createdAt,
+            updatedAt: Timestamp.now(),
+          }).catch((migrationError) => {
+            console.error("Erro ao migrar createdAt para serviceDate:", migrationError);
+          });
+        }
   
         setService(data);
         setLoading(false);
@@ -281,6 +294,8 @@ function ServiceDetails() {
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down("sm"));
 
+  console.log("Service Data:", service);
+
   return (
     <Container>
       <BoxButtons>
@@ -345,9 +360,7 @@ function ServiceDetails() {
                 <InfoLabelCell component="th" scope="row">
                   Data de Criação
                 </InfoLabelCell>
-                <TableValue>
-                  {service.createdAt?.toDate?.()?.toLocaleDateString() ?? "-"}
-                </TableValue>
+                <TableValue>{formatPtBrDate(getServicePrimaryDate(service))}</TableValue>
               </InfoItem>
 
               <InfoItem>

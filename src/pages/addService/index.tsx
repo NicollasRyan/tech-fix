@@ -11,6 +11,7 @@ import {
 } from "firebase/firestore";
 import { FirebaseError } from "firebase/app";
 import { auth, db } from "../../firebase.ts";
+import type { ServiceDoc } from "../../types/service.ts";
 import { serviceSchema } from "./serviceSchema.ts";
 import {
   normalizeServiceType,
@@ -60,6 +61,7 @@ import dayjs from "dayjs";
 import z from "zod";
 import { createCalendarEvent } from "../../services/calendarService.ts";
 import React from "react";
+import { getServicePrimaryDate } from "../../utils/firestoreDate.ts";
 dayjs.locale("pt-br");
 
 type FormValues = z.infer<typeof serviceSchema>;
@@ -71,6 +73,7 @@ export type ModalAddServiceInitialData = {
   valueService: number | null;
   notificationDate: { toDate: () => Date } | null;
   descriptionMaintenance: string;
+  serviceDate: { toDate: () => Date } | null;
   phone?: string;
   email?: string;
   cpf?: string;
@@ -89,6 +92,7 @@ const defaultValues: FormValues = {
   notify: false,
   notificationDate: null,
   descriptionMaintenance: "",
+  serviceDate: null,
   phone: "",
   email: "",
   cpf: "",
@@ -172,7 +176,7 @@ export const AddService = ({
         const docSnap = await getDoc(docRef);
 
         if (docSnap.exists()) {
-          const data = docSnap.data();
+          const data = docSnap.data() as ServiceDoc;
           setInitialData({
             clientName: data.clientName,
             serviceType: data.serviceType,
@@ -180,6 +184,7 @@ export const AddService = ({
             valueService: data.valueService,
             notificationDate: data.notificationDate,
             descriptionMaintenance: data.descriptionMaintenance,
+            serviceDate: getServicePrimaryDate(data),
             phone: data.phone,
             email: data.email,
             cpf: data.cpf,
@@ -217,6 +222,8 @@ export const AddService = ({
   const usedParts = watch("usedParts") ?? [];
   const [pieceInput, setPieceInput] = useState("");
 
+  console.log("Initial Data:", initialData);
+
   useEffect(() => {
     if (isEdit && initialData) {
       const hasNotification = !!initialData.notificationDate;
@@ -230,6 +237,9 @@ export const AddService = ({
           hasNotification && initialData.notificationDate
             ? dayjs(initialData.notificationDate.toDate())
             : null,
+        serviceDate: initialData.serviceDate
+          ? dayjs(initialData.serviceDate.toDate())
+          : dayjs(),
         descriptionMaintenance: initialData.descriptionMaintenance,
         phone: initialData.phone?.toString() ?? "",
         email: initialData.email || "",
@@ -241,7 +251,7 @@ export const AddService = ({
         usedParts: initialData.usedParts || [],
       });
     } else {
-      reset(defaultValues);
+      reset({ ...defaultValues, serviceDate: dayjs() });
     }
   }, [isEdit, initialData, reset]);
 
@@ -286,6 +296,9 @@ export const AddService = ({
       data.notify && data.notificationDate
         ? Timestamp.fromDate(data.notificationDate.toDate())
         : null;
+    const serviceDateTimestamp = data.serviceDate
+      ? Timestamp.fromDate(data.serviceDate.toDate())
+      : Timestamp.now();
     if (!parsedValue || parsedValue <= 0) {
       notifyError("Valor do serviço inválido. Informe um número positivo.");
       return;
@@ -298,6 +311,7 @@ export const AddService = ({
           description: data?.description,
           valueService: parsedValue,
           notificationDate: notificationTimestamp,
+          serviceDate: serviceDateTimestamp,
           descriptionMaintenance: data.descriptionMaintenance,
           phone: data?.phone,
           email: data?.email,
@@ -307,6 +321,7 @@ export const AddService = ({
           equipmentModel: data?.equipmentModel,
           equipmentBrand: data?.equipmentBrand,
           usedParts: data?.usedParts || [],
+          createdAt: serviceDateTimestamp,
           updatedAt: Timestamp.now(),
         };
 
@@ -328,7 +343,8 @@ export const AddService = ({
           equipmentBrand: data?.equipmentBrand,
           usedParts: data?.usedParts || [],
           userId: user.uid,
-          createdAt: Timestamp.now(),
+          serviceDate: serviceDateTimestamp,
+          createdAt: serviceDateTimestamp,
           updatedAt: Timestamp.now(),
           manutencoes: [],
         };
@@ -530,6 +546,25 @@ export const AddService = ({
                         helperText={errors.valueService?.message}
                         onValueChange={(values) => {
                           field.onChange(values.floatValue ?? null);
+                        }}
+                      />
+                    )}
+                  />
+                </Grid>
+                <Grid size={{ xs: 12, md: 12 }}>
+                  <Label>Data do Serviço</Label>
+                  <Controller
+                    name="serviceDate"
+                    control={control}
+                    render={({ field }) => (
+                      <DatePicker
+                        value={field.value}
+                        onChange={(date) => field.onChange(date)}
+                        format="DD/MM/YYYY"
+                        slotProps={{
+                          textField: {
+                            fullWidth: true,
+                          },
                         }}
                       />
                     )}

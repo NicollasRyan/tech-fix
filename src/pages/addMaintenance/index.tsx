@@ -20,6 +20,8 @@ import { useEffect, useState } from "react";
 import { db } from "../../firebase.ts";
 import { LocalizationProvider } from "@mui/x-date-pickers/LocalizationProvider";
 import { AdapterDayjs } from "@mui/x-date-pickers/AdapterDayjs";
+import { DatePicker } from "@mui/x-date-pickers/DatePicker";
+import dayjs from "dayjs";
 import { zodResolver } from "@hookform/resolvers/zod";
 import {
   BoxButtons,
@@ -51,10 +53,11 @@ type Maintenance = {
 const defaultValues = {
   title: "",
   description: "",
-  valueService: 0,
+  valueService: null,
   notify: false,
   usedParts: [],
   notificationDate: null,
+  serviceDate: null,
 };
 
 export const AddMaintenance = () => {
@@ -143,9 +146,12 @@ export const AddMaintenance = () => {
         usedParts: maintenanceToEdit.usedParts || [],
         notify: false,
         notificationDate: null,
+        serviceDate: maintenanceToEdit.createdAt
+          ? dayjs(maintenanceToEdit.createdAt.toDate())
+          : dayjs(),
       });
     } else if (!loading) {
-      reset(defaultValues);
+      reset({ ...defaultValues, serviceDate: dayjs() });
     }
   }, [maintenanceToEdit, loading, reset]);
 
@@ -167,6 +173,9 @@ export const AddMaintenance = () => {
 
     try {
       const parsedValue = data.valueService;
+      const serviceDateTimestamp = data.serviceDate
+        ? Timestamp.fromDate(data.serviceDate.toDate())
+        : Timestamp.now();
 
       if (!parsedValue || parsedValue <= 0) {
         setFeedback({
@@ -185,6 +194,7 @@ export const AddMaintenance = () => {
               title: data.title,
               description: data?.description,
               valueService: parsedValue || 0,
+              createdAt: serviceDateTimestamp,
               usedParts: data?.usedParts || [],
             }
             : m,
@@ -202,7 +212,7 @@ export const AddMaintenance = () => {
             description: data?.description,
             valueService: parsedValue || 0,
             usedParts: data?.usedParts || [],
-            createdAt: Timestamp.now(),
+            createdAt: serviceDateTimestamp,
           }),
           updatedAt: Timestamp.now(),
         });
@@ -274,6 +284,25 @@ export const AddMaintenance = () => {
                         helperText={errors.valueService?.message}
                         onValueChange={(values) => {
                           field.onChange(values.floatValue ?? null);
+                        }}
+                      />
+                    )}
+                  />
+                </Grid>
+                <Grid size={{ xs: 12, md: 12 }}>
+                  <Label>Data do Serviço</Label>
+                  <Controller
+                    name="serviceDate"
+                    control={control}
+                    render={({ field }) => (
+                      <DatePicker
+                        value={field.value || dayjs()}
+                        onChange={(date) => field.onChange(date)}
+                        format="DD/MM/YYYY"
+                        slotProps={{
+                          textField: {
+                            fullWidth: true,
+                          },
                         }}
                       />
                     )}

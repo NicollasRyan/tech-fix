@@ -6,17 +6,19 @@ import {
   SERVICE_TYPE_LABELS,
   type ServiceType,
 } from "../../constants/serviceTypes.ts";
+import type { FirestoreDateLike } from "../../types/service.ts";
+import { formatPtBrDate } from "../../utils/firestoreDate.ts";
 import React from "react";
 
 export const CardService = ({
   serviceType,
   clientName,
-  createdAt,
+  serviceDate,
   city,
 }: {
   serviceType: string;
   clientName: string;
-  createdAt: { toDate: () => Date };
+  serviceDate?: FirestoreDateLike;
   city?: string;
 }) => {
   const normalizedType = normalizeServiceType(serviceType);
@@ -54,9 +56,7 @@ export const CardService = ({
         <TextClient>{city ? `${clientName} - ${city}` : clientName}</TextClient>
         <Typography variant="body2" sx={{ color: "#666", fontSize: "13px" }}>
           Realizado:{" "}
-          <span style={{ color: "red" }}>
-            {createdAt.toDate().toLocaleDateString("pt-BR")}
-          </span>
+          <span style={{ color: "red" }}>{formatPtBrDate(serviceDate)}</span>
         </Typography>
       </CardContent>
     </CardBox>
