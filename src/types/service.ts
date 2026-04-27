@@ -19,6 +19,8 @@ export type ServiceDoc = {
   notificationDate: FirestoreDateLike;
   serviceDate?: FirestoreDateLike;
   createdAt?: FirestoreDateLike;
+  dateService?: FirestoreDateLike;
+  descriptionMaintenance?: string;
   manutencoes?: any[];
   phone?: string;
   email?: string;
