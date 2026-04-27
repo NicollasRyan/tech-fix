@@ -33,6 +33,7 @@ import { NoService } from "../../components/NoService/index.tsx";
 import { useAuth } from "../../contexts/AuthContext.tsx";
 import { useLocation, useNavigate } from "react-router-dom";
 import React from "react";
+import { getServicePrimaryDate, toJsDate } from "../../utils/firestoreDate.ts";
 
 type FilterType = "all" | ServiceType;
 
@@ -73,8 +74,8 @@ function Home() {
         })) as ServiceDoc[];
 
         list.sort((a, b) => {
-          const ta = a?.createdAt?.toDate ? a.createdAt.toDate().getTime() : 0;
-          const tb = b?.createdAt?.toDate ? b.createdAt.toDate().getTime() : 0;
+          const ta = toJsDate(getServicePrimaryDate(a))?.getTime() ?? 0;
+          const tb = toJsDate(getServicePrimaryDate(b))?.getTime() ?? 0;
           return tb - ta;
         });
 
@@ -174,7 +175,7 @@ function Home() {
                       serviceType={service.serviceType}
                       city={service?.city}
                       clientName={service.clientName}
-                      createdAt={service.createdAt as { toDate: () => Date }}
+                      serviceDate={getServicePrimaryDate(service)}
                     />
                   </LinkToService>
                 </Grid>

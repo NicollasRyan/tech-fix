@@ -11,6 +11,7 @@ import {
 } from "firebase/firestore";
 import { FirebaseError } from "firebase/app";
 import { auth, db } from "../../firebase.ts";
+import type { ServiceDoc } from "../../types/service.ts";
 import { serviceSchema } from "./serviceSchema.ts";
 import {
   normalizeServiceType,
@@ -60,6 +61,7 @@ import dayjs from "dayjs";
 import z from "zod";
 import { createCalendarEvent } from "../../services/calendarService.ts";
 import React from "react";
+import { getServicePrimaryDate } from "../../utils/firestoreDate.ts";
 dayjs.locale("pt-br");
 
 type FormValues = z.infer<typeof serviceSchema>;
@@ -71,6 +73,7 @@ export type ModalAddServiceInitialData = {
   valueService: number | null;
   notificationDate: { toDate: () => Date } | null;
   descriptionMaintenance: string;
+  serviceDate: { toDate: () => Date } | null;
   phone?: string;
   email?: string;
   cpf?: string;
@@ -89,6 +92,7 @@ const defaultValues: FormValues = {
   notify: false,
   notificationDate: null,
   descriptionMaintenance: "",
+  serviceDate: null,
   phone: "",
   email: "",
   cpf: "",
@@ -130,29 +134,35 @@ export const AddService = ({
     message: "",
   });
 
-  const notifySuccess = useCallback((message: string) => {
-    if (onSuccess) {
-      onSuccess(message);
-      return;
-    }
-    setFeedback({
-      open: true,
-      severity: "success",
-      message,
-    });
-  }, [onSuccess]);
+  const notifySuccess = useCallback(
+    (message: string) => {
+      if (onSuccess) {
+        onSuccess(message);
+        return;
+      }
+      setFeedback({
+        open: true,
+        severity: "success",
+        message,
+      });
+    },
+    [onSuccess],
+  );
 
-  const notifyError = useCallback((message: string) => {
-    if (onError) {
-      onError(message);
-      return;
-    }
-    setFeedback({
-      open: true,
-      severity: "error",
-      message,
-    });
-  }, [onError]);
+  const notifyError = useCallback(
+    (message: string) => {
+      if (onError) {
+        onError(message);
+        return;
+      }
+      setFeedback({
+        open: true,
+        severity: "error",
+        message,
+      });
+    },
+    [onError],
+  );
 
   useEffect(() => {
     if (!isEdit || initialData || loading) return;
@@ -166,14 +176,15 @@ export const AddService = ({
         const docSnap = await getDoc(docRef);
 
         if (docSnap.exists()) {
-          const data = docSnap.data();
+          const data = docSnap.data() as ServiceDoc;
           setInitialData({
             clientName: data.clientName,
             serviceType: data.serviceType,
             description: data.description,
-            valueService: data.valueService,
+            valueService: Number(data.valueService ?? 0),
             notificationDate: data.notificationDate,
-            descriptionMaintenance: data.descriptionMaintenance,
+            descriptionMaintenance: data.descriptionMaintenance || "",
+            serviceDate: getServicePrimaryDate(data),
             phone: data.phone,
             email: data.email,
             cpf: data.cpf,
@@ -211,6 +222,8 @@ export const AddService = ({
   const usedParts = watch("usedParts") ?? [];
   const [pieceInput, setPieceInput] = useState("");
 
+  console.log("Initial Data:", initialData);
+
   useEffect(() => {
     if (isEdit && initialData) {
       const hasNotification = !!initialData.notificationDate;
@@ -224,6 +237,9 @@ export const AddService = ({
           hasNotification && initialData.notificationDate
             ? dayjs(initialData.notificationDate.toDate())
             : null,
+        serviceDate: initialData.serviceDate
+          ? dayjs(initialData.serviceDate.toDate())
+          : dayjs(),
         descriptionMaintenance: initialData.descriptionMaintenance,
         phone: initialData.phone?.toString() ?? "",
         email: initialData.email || "",
@@ -235,7 +251,7 @@ export const AddService = ({
         usedParts: initialData.usedParts || [],
       });
     } else {
-      reset(defaultValues);
+      reset({ ...defaultValues, serviceDate: dayjs() });
     }
   }, [isEdit, initialData, reset]);
 
@@ -269,7 +285,7 @@ export const AddService = ({
   const onSubmit = async (data: FormValues) => {
     const user = auth.currentUser;
     if (!user) {
-      notifyError("Usuario nao autenticado. Faca login novamente.");
+      notifyError("Usuario nao autenticado. Faça login novamente.");
       return;
     }
 
@@ -280,6 +296,9 @@ export const AddService = ({
       data.notify && data.notificationDate
         ? Timestamp.fromDate(data.notificationDate.toDate())
         : null;
+    const serviceDateTimestamp = data.serviceDate
+      ? Timestamp.fromDate(data.serviceDate.toDate())
+      : Timestamp.now();
     if (!parsedValue || parsedValue <= 0) {
       notifyError("Valor do serviço inválido. Informe um número positivo.");
       return;
@@ -292,6 +311,7 @@ export const AddService = ({
           description: data?.description,
           valueService: parsedValue,
           notificationDate: notificationTimestamp,
+          serviceDate: serviceDateTimestamp,
           descriptionMaintenance: data.descriptionMaintenance,
           phone: data?.phone,
           email: data?.email,
@@ -301,6 +321,7 @@ export const AddService = ({
           equipmentModel: data?.equipmentModel,
           equipmentBrand: data?.equipmentBrand,
           usedParts: data?.usedParts || [],
+          createdAt: serviceDateTimestamp,
           updatedAt: Timestamp.now(),
         };
 
@@ -322,7 +343,8 @@ export const AddService = ({
           equipmentBrand: data?.equipmentBrand,
           usedParts: data?.usedParts || [],
           userId: user.uid,
-          createdAt: Timestamp.now(),
+          serviceDate: serviceDateTimestamp,
+          createdAt: serviceDateTimestamp,
           updatedAt: Timestamp.now(),
           manutencoes: [],
         };
@@ -529,6 +551,25 @@ export const AddService = ({
                     )}
                   />
                 </Grid>
+                <Grid size={{ xs: 12, md: 12 }}>
+                  <Label>Data do Serviço</Label>
+                  <Controller
+                    name="serviceDate"
+                    control={control}
+                    render={({ field }) => (
+                      <DatePicker
+                        value={field.value}
+                        onChange={(date) => field.onChange(date)}
+                        format="DD/MM/YYYY"
+                        slotProps={{
+                          textField: {
+                            fullWidth: true,
+                          },
+                        }}
+                      />
+                    )}
+                  />
+                </Grid>
                 <Grid size={12}>
                   <Label>Descrição do Serviço (Opcional)</Label>
                   <TextField
@@ -575,7 +616,9 @@ export const AddService = ({
                       },
                     }}
                   />
-                  <Box sx={{ mt: 2, display: "flex", gap: 1, flexWrap: "wrap" }}>
+                  <Box
+                    sx={{ mt: 2, display: "flex", gap: 1, flexWrap: "wrap" }}
+                  >
                     {usedParts?.map((piece, index) => (
                       <Chip
                         key={index}
@@ -627,13 +670,16 @@ export const AddService = ({
                             )}
                           />
                           <Label>Proxima Manutenção</Label>
-                          <TextField fullWidth {...register("descriptionMaintenance")} />
+                          <TextField
+                            fullWidth
+                            {...register("descriptionMaintenance")}
+                          />
                         </BoxDate>
                       ) : (
                         <Alert severity="warning" sx={{ mb: 2 }}>
                           <AlertTitle>Google Calendar não conectado</AlertTitle>
-                          Para usar notificações automáticas, conecte sua conta do Google
-                          nas configurações do perfil.
+                          Para usar notificações automáticas, conecte sua conta
+                          do Google nas configurações do perfil.
                         </Alert>
                       )}
                     </>
@@ -645,8 +691,12 @@ export const AddService = ({
                 <ButtonCancel onClick={() => navigate("/")}>
                   Cancelar
                 </ButtonCancel>
-                <ButtonSubmit type="submit">
-                  {isSubmitting ? "Salvando..." : isEdit ? "Salvar" : "Adicionar"}
+                <ButtonSubmit type="submit" disabled={isSubmitting}>
+                  {isSubmitting
+                    ? "Salvando..."
+                    : isEdit
+                      ? "Salvar"
+                      : "Adicionar"}
                 </ButtonSubmit>
               </BoxButtons>
             </form>

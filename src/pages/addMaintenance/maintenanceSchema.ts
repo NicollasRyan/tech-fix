@@ -9,7 +9,13 @@ export const maintenanceSchema = z.object({
     .max(100, "Título não pode exceder 100 caracteres")
     .trim(),
   description: z.string().optional(),
-  valueService: z.number().min(0.01, "Informe um valor válido"),
+  valueService: z
+    .number()
+    .nullable()
+    .refine((val) => val !== null && val >= 0.01, {
+      message: "Informe um valor válido",
+    }),
+  serviceDate: z.any().nullable(),
   usedParts: z.array(z.string()).optional(),
   notify: z.boolean().optional(),
   notificationDate: z.any().optional().nullable(),
