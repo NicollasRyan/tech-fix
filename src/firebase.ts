@@ -8,9 +8,6 @@ import { getFunctions } from "firebase/functions";
 export const googleProvider = new GoogleAuthProvider();
 googleProvider.addScope("https://www.googleapis.com/auth/calendar");
 googleProvider.addScope("https://www.googleapis.com/auth/calendar.events");
-googleProvider.setCustomParameters({
-  prompt: "consent",
-});
 
 googleProvider.setCustomParameters({
   prompt: "consent",

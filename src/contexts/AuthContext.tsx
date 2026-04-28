@@ -27,6 +27,8 @@ type AuthContextType = {
 
 const AuthContext = createContext<AuthContextType | null>(null);
 
+const GOOGLE_CONNECTION_EXPIRY_DAYS = 30;
+
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [accessToken, setAccessToken] = useState<string | null>(null);
@@ -91,12 +93,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
           if (data.googleConnected) {
             if (data.googleConnectedAt) {
-              const connectedAt = data.googleConnectedAt.toDate() ?? new Date();
+              const connectedAt = data.googleConnectedAt.toDate();
               const now = new Date();
               const diffInDays =
                 (now.getTime() - connectedAt.getTime()) / (1000 * 60 * 60 * 24);
 
-              if (diffInDays > 30) {
+              if (diffInDays > GOOGLE_CONNECTION_EXPIRY_DAYS) {
                 await updateDoc(userRef, {
                   googleConnected: false,
                   googleConnectedAt: null,
@@ -107,16 +109,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
                 localStorage.removeItem("googleAccessToken");
                 localStorage.removeItem("googleTokenCreated");
                 setError(
-                  "A conexão com Google Calendar expirou (30 dias). Reconecte no perfil.",
+                  `A conexão com Google Calendar expirou (${GOOGLE_CONNECTION_EXPIRY_DAYS} dias). Reconecte no perfil.`,
                 );
               } else {
                 setGoogleConnected(true);
               }
             } else {
-              const now = new Date();
-              await updateDoc(userRef, {
-                googleConnectedAt: now,
-              });
               setGoogleConnected(true);
             }
           } else {

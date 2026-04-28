@@ -50,21 +50,37 @@ ${description || ""}
     },
   };
 
-  const response = await fetch(
-    `${process.env.REACT_APP_BASE_URL}/calendar/create-event`,
-    {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), 30000);
+
+  try {
+    const response = await fetch(
+      `${process.env.REACT_APP_BASE_URL}/calendar/create-event`,
+      {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ uid: userId, event }),
+        signal: controller.signal, // ✅ Vincular ao controller
       },
-      body: JSON.stringify({ uid: userId, event }),
-    },
-  );
+    );
 
-  if (!response.ok) {
-    const error = await response.text();
-    throw new Error(error);
+    clearTimeout(timeoutId); // ✅ Limpar timeout se sucesso
+
+    if (!response.ok) {
+      const contentType = response.headers.get("content-type");
+      const error = contentType?.includes("application/json")
+        ? await response.json()
+        : await response.text();
+      throw new Error(`[${response.status}] ${error.message || error}`);
+    }
+
+    return await response.json();
+  } catch (error: any) {
+    if (error.name === "AbortError") {
+      throw new Error("Timeout: Requisição demorou mais de 30 segundos");
+    }
+    throw error;
   }
-
-  return await response.json();
 }

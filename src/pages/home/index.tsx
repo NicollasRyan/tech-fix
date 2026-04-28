@@ -40,8 +40,7 @@ type FilterType = "all" | ServiceType;
 function Home() {
   const [services, setServices] = useState<ServiceDoc[]>([]);
   const [filter, setFilter] = useState<FilterType>("all");
-  const { googleConnected, loadingData, setLoadingData, error, clearError } =
-    useAuth();
+  const authContext = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
   const [feedback, setFeedback] = useState<{
@@ -54,7 +53,11 @@ function Home() {
     message: "",
   });
 
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   useEffect(() => {
+    if (!authContext) return; // Verificação dentro do useEffect
+
+    const { setLoadingData } = authContext;
     let unsubscribeSnapshot: (() => void) | undefined;
     const unsubscribeAuth = onAuthStateChanged(auth, (user) => {
       unsubscribeSnapshot?.();
@@ -88,7 +91,8 @@ function Home() {
       unsubscribeAuth();
       unsubscribeSnapshot?.();
     };
-  }, [setLoadingData]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []); // Intencionalmente vazio - só roda na montagem
 
   useEffect(() => {
     const stateFeedback = (location.state as any)?.feedback;
@@ -103,14 +107,29 @@ function Home() {
   }, [location.pathname, location.state, navigate]);
 
   useEffect(() => {
-    if (!error) return;
+    if (!authContext?.error) return;
+
     setFeedback({
       open: true,
       severity: "error",
-      message: error,
+      message: authContext.error,
     });
-    clearError?.();
-  }, [clearError, error]);
+    authContext.clearError?.();
+  }, [authContext?.error, authContext?.clearError]);
+
+  // Verificação condicional APÓS todos os hooks
+  if (!authContext) {
+    return (
+      <Container>
+        <Alert severity="error">
+          <AlertTitle>Erro</AlertTitle>
+          Contexto de autenticação não encontrado
+        </Alert>
+      </Container>
+    );
+  }
+
+  const { googleConnected, loadingData } = authContext;
 
   return (
     <Container>
