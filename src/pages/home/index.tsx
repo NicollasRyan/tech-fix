@@ -115,7 +115,7 @@ function Home() {
       message: authContext.error,
     });
     authContext.clearError?.();
-  }, [authContext?.error, authContext?.clearError]);
+  }, [authContext.error, authContext.clearError, authContext]);
 
   // Verificação condicional APÓS todos os hooks
   if (!authContext) {
